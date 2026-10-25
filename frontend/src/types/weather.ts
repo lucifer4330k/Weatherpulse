@@ -15,35 +15,58 @@ export interface BoundingBox {
 export interface CurrentWeather {
   temperature: number;
   feelsLike: number;
+  feels_like?: number;
   humidity: number;
   windSpeed: number;
+  wind_speed?: number;
   windDirection: number;
+  wind_direction?: number;
   windDirectionText: string;
+  wind_direction_text?: string;
   precipitation: number;
   pressure: number;
   weatherCode: number;
+  weather_code?: number;
   weatherDescription: string;
+  weather_description?: string;
   isDay: boolean;
+  is_day?: boolean;
   time: string; // ISO timestamp
   source: 'model' | 'observed';
+  visibility?: number;
+  cloudCover?: number;
+  cloud_cover?: number;
+  uvIndex?: number;
+  uv_index?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface HourlyForecast {
   time: string;
   temperature: number;
   feelsLike: number;
+  feels_like?: number;
   humidity: number;
   windSpeed: number;
+  wind_speed?: number;
   windDirection: number;
+  wind_direction?: number;
   windDirectionText: string;
+  wind_direction_text?: string;
   precipitation: number;
   precipitationProbability: number;
+  precipitation_probability?: number;
   weatherCode: number;
+  weather_code?: number;
   weatherDescription: string;
+  weather_description?: string;
   pressure: number;
   cloudCover: number;
+  cloud_cover?: number;
   visibility: number;
   uvIndex: number;
+  uv_index?: number;
 }
 
 export interface DailyForecast {
@@ -55,10 +78,14 @@ export interface DailyForecast {
   humidity: number;
   windSpeedMax: number;
   windDirectionDominant: number;
+  windDirectionText?: string;
+  wind_direction_text?: string;
   precipitationSum: number;
   precipitationProbabilityMax: number;
   weatherCode: number;
+  weather_code?: number;
   weatherDescription: string;
+  weather_description?: string;
   pressure: number;
   uvIndexMax: number;
   sunrise: string;

@@ -47,40 +47,40 @@ export function WeatherDashboard() {
   ];
 
   return (
-    <div className="fixed right-0 top-0 h-full w-full max-w-xl z-50 animate-slide-in">
+    <div className="dashboard-panel animate-slide-in-right">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[-1]"
+        className="dashboard-backdrop"
         onClick={() => closeDashboard(false)}
         aria-hidden="true"
       />
 
       {/* Panel */}
-      <div className="h-full glass-panel flex flex-col border-l border-dark-700/50">
+      <div className="h-full flex flex-col elevation-5 border-l border-neutral-800/50">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-dark-700/50">
+        <div className="dashboard-header flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-lg bg-primary-600/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary-400 text-lg font-semibold">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary-500/25">
+              <span className="text-white font-bold text-lg">
                 {locationName?.charAt(0).toUpperCase() || '📍'}
               </span>
             </div>
             <div className="min-w-0">
-              <h2 className="text-white font-semibold truncate">{locationName || 'Weather Details'}</h2>
-              <p className="text-dark-400 text-sm truncate">Live weather & historical analytics</p>
+              <h2 className="text-white font-semibold text-base truncate">{locationName || 'Weather Details'}</h2>
+              <p className="text-neutral-500 text-xs truncate">Live weather & historical analytics</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => refetch()}
-              className="p-2 rounded-lg bg-dark-800 hover:bg-dark-700 text-dark-300 hover:text-white transition-colors"
+              className="btn-icon btn-ghost hover:bg-neutral-800/50"
               aria-label="Refresh weather data"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
             <button
               onClick={() => closeDashboard(false)}
-              className="p-2 rounded-lg bg-dark-800 hover:bg-dark-700 text-dark-300 hover:text-white transition-colors"
+              className="btn-icon btn-ghost hover:bg-neutral-800/50"
               aria-label="Close dashboard"
             >
               <X className="w-5 h-5" />
@@ -89,20 +89,17 @@ export function WeatherDashboard() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-dark-700/50 overflow-x-auto px-2 pb-1">
+        <div className="tab-list px-4 pb-3 border-b border-neutral-800/30">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'bg-primary-600/20 text-primary-400 border border-primary-500/30'
-                  : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800/50'
-              }`}
+              className="tab"
+              data-state={activeTab === tab.id ? 'active' : 'inactive'}
             >
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 text-xs flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 text-[10px] flex items-center justify-center font-bold">
                   {tab.count > 9 ? '9+' : tab.count}
                 </span>
               )}
@@ -111,21 +108,23 @@ export function WeatherDashboard() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+        <div className="dashboard-content">
           {isActuallyLoading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
-              <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-              <p className="text-dark-400">Loading weather data...</p>
-              <p className="text-dark-500 text-sm">Fetching latest conditions</p>
+              <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-neutral-400 text-sm">Loading weather data...</p>
+              <p className="text-neutral-600 text-xs">Fetching latest conditions</p>
             </div>
           ) : error && !weatherData ? (
             <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-4">
-              <AlertTriangle className="w-12 h-12 text-yellow-500" />
+              <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
               <h3 className="text-white font-semibold">Unable to load weather data</h3>
-              <p className="text-dark-400 text-sm">{error instanceof Error ? error.message : 'Error fetching data'}</p>
+              <p className="text-neutral-500 text-sm">{error instanceof Error ? error.message : 'Error fetching data'}</p>
               <button
                 onClick={() => refetch()}
-                className="btn-primary mt-2"
+                className="btn-primary"
               >
                 Try Again
               </button>

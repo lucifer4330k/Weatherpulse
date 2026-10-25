@@ -1,0 +1,21 @@
+{
+  "name": "weatherpulse",
+  "version": "1.0.0",
+  "description": "[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)\r [![React](https://img.shields.io/badge/React-18.3-61DAFB.svg?style=flat&logo=react&logoColor=black)](https://react.dev)\r [![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-7.4.0-231F20.svg?style=flat&logo=apachekafka&logoColor=white)](https://kafka.apache.org)\r [![Apache Spark](https://img.shields.io/badge/Apache%20Spark-3.4.1-E25A1C.svg?style=flat&logo=apachespark&logoColor=white)](https://spark.apache.org)\r [![Apache Cassandra](https://img.shields.io/badge/Cassandra-4.1-1287B1.svg?style=flat&logo=apachecassandra&logoColor=white)](https://cassandra.apache.org)\r [![Apache Airflow](https://img.shields.io/badge/Airflow-2.7.0-017CEE.svg?style=flat&logo=apacheairflow&logoColor=white)](https://airflow.apache.org)\r [![Redis](https://img.shields.io/badge/Redis-7--alpine-DC382D.svg?style=flat&logo=redis&logoColor=white)](https://redis.io)\r [![MapLibre GL](https://img.shields.io/badge/MapLibre%20GL-v4-396B9E.svg?style=flat&logo=maplibre&logoColor=white)](https://maplibre.org)\r [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v2+-2496ED.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucifer4330k/Weatherpulse.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lucifer4330k/Weatherpulse/issues"
+  },
+  "homepage": "https://github.com/lucifer4330k/Weatherpulse#readme"
+}

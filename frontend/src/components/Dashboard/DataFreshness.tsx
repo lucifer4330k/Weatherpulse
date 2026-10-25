@@ -65,10 +65,10 @@ export function DataFreshness({ data }: DataFreshnessProps) {
   const sourceInfo = sourceLabels[data.dataSource] || sourceLabels['open-meteo'];
 
   return (
-    <div className="glass-card p-4 border-t border-dark-700/50 mt-4">
+    <div className="glass-card p-4 border-t border-neutral-800/50">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg bg-dark-700/50 flex items-center justify-center ${freshnessColor}`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${freshnessColor}/20`}>
             {freshnessIcon}
           </div>
           <div>
@@ -77,16 +77,16 @@ export function DataFreshness({ data }: DataFreshnessProps) {
           </div>
         </div>
         <div className="flex items-center gap-3 text-right">
-          <div className="flex items-center gap-1.5 text-dark-400 text-xs">
+          <div className="flex items-center gap-1.5 text-neutral-400 text-xs">
             {sourceInfo.icon}
             <span className="font-medium text-white">{sourceInfo.label}</span>
           </div>
         </div>
       </div>
-      <p className="text-dark-500 text-xs mt-3 ml-10">{sourceInfo.description}</p>
+      <p className="text-neutral-500 text-xs mt-3 ml-12">{sourceInfo.description}</p>
 
       {/* Cache status */}
-      <div className="mt-3 pt-3 border-t border-dark-700/30 flex items-center justify-between text-xs text-dark-500">
+      <div className="mt-3 pt-3 border-t border-neutral-800/30 flex items-center justify-between text-xs text-neutral-500">
         <span>Next auto-refresh: ~{getNextRefreshMinutes(data.dataSource)} min</span>
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />

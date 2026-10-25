@@ -12,7 +12,7 @@ import {
   Legend,
   Cell,
 } from 'recharts';
-import { Calendar, TrendingUp, TrendingDown, Minus, BarChart2 } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Minus, BarChart2, Droplets } from 'lucide-react';
 import type { WeatherDashboardData, WeatherTrends, HistoricalDataPoint } from '../../types';
 
 interface HistoricalChartsProps {
@@ -25,12 +25,12 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
 
   if (!trends) {
     return (
-      <div className="glass-card p-6 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-dark-700 flex items-center justify-center">
-          <BarChart2 className="w-8 h-8 text-dark-500" />
+      <div className="glass-card p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
+          <BarChart2 className="w-8 h-8 text-neutral-500" />
         </div>
-        <h3 className="text-dark-400 font-medium">No historical data available</h3>
-        <p className="text-dark-500 text-sm mt-1">
+        <h3 className="text-neutral-400 font-medium">No historical data available</h3>
+        <p className="text-neutral-500 text-sm mt-1">
           Historical trends will appear here once data is loaded
         </p>
       </div>
@@ -68,23 +68,20 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
   }, [filteredPrecipData]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Period Selector */}
       <div className="flex items-center justify-between">
-        <h4 className="text-dark-300 font-medium flex items-center gap-2">
+        <h4 className="text-neutral-200 font-medium flex items-center gap-2">
           <Calendar className="w-4 h-4" />
           Historical Trends
         </h4>
-        <div className="flex gap-1 bg-dark-800/50 rounded-lg p-1">
+        <div className="tab-list">
           {(['7d', '30d', '90d', '1y'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                period === p
-                  ? 'bg-primary-600 text-white shadow'
-                  : 'text-dark-400 hover:text-white'
-              }`}
+              className={`tab ${period === p ? 'data-[state=active]' : ''}`}
+              data-state={period === p ? 'active' : 'inactive'}
             >
               {p.toUpperCase()}
             </button>
@@ -119,8 +116,8 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
       </div>
 
       {/* Temperature Chart */}
-      <div className="glass-card p-4">
-        <h5 className="text-dark-300 font-medium mb-4 flex items-center gap-2">
+      <div className="glass-card p-5">
+        <h5 className="text-neutral-200 font-medium mb-4 flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-red-400" />
           Temperature Trend ({period.toUpperCase()})
         </h5>
@@ -133,24 +130,24 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
                   <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgb(30 41 59 / 0.5)" vertical={false} />
               <XAxis
                 dataKey="timestamp"
                 tickFormatter={(value) => formatChartDate(value, period)}
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                axisLine={{ stroke: '#334155' }}
-                tickLine={{ stroke: '#334155' }}
+                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: 'rgb(51 65 85)' }}
+                tickLine={{ stroke: 'rgb(51 65 85)' }}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                axisLine={{ stroke: '#334155' }}
-                tickLine={{ stroke: '#334155' }}
-                label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: 'rgb(51 65 85)' }}
+                tickLine={{ stroke: 'rgb(51 65 85)' }}
+                label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', fill: 'rgb(100 116 139)', fontSize: 11 }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
+                  backgroundColor: 'rgb(15 23 42)',
+                  border: '1px solid rgb(51 65 85)',
                   borderRadius: '8px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
                 }}
@@ -177,32 +174,32 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
       </div>
 
       {/* Precipitation Chart */}
-      <div className="glass-card p-4">
-        <h5 className="text-dark-300 font-medium mb-4 flex items-center gap-2">
+      <div className="glass-card p-5">
+        <h5 className="text-neutral-200 font-medium mb-4 flex items-center gap-2">
           <Droplets className="w-4 h-4 text-cyan-400" />
           Precipitation ({period.toUpperCase()})
         </h5>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={filteredPrecipData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgb(30 41 59 / 0.5)" vertical={false} />
               <XAxis
                 dataKey="timestamp"
                 tickFormatter={(value) => formatChartDate(value, period)}
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                axisLine={{ stroke: '#334155' }}
-                tickLine={{ stroke: '#334155' }}
+                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: 'rgb(51 65 85)' }}
+                tickLine={{ stroke: 'rgb(51 65 85)' }}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                axisLine={{ stroke: '#334155' }}
-                tickLine={{ stroke: '#334155' }}
-                label={{ value: 'Precipitation (mm)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: 'rgb(51 65 85)' }}
+                tickLine={{ stroke: 'rgb(51 65 85)' }}
+                label={{ value: 'Precipitation (mm)', angle: -90, position: 'insideLeft', fill: 'rgb(100 116 139)', fontSize: 11 }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
+                  backgroundColor: 'rgb(15 23 42)',
+                  border: '1px solid rgb(51 65 85)',
                   borderRadius: '8px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
                 }}
@@ -223,7 +220,7 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
       </div>
 
       {/* Data Source Note */}
-      <div className="flex items-center gap-2 text-dark-500 text-sm p-3 bg-dark-800/50 rounded-lg">
+      <div className="flex items-center gap-2 text-neutral-500 text-sm p-3 glass-subtle rounded-xl">
         <Calendar className="w-4 h-4" />
         <span>
           Data source: {trends.temperature.data[0]?.source === 'cassandra' ? 'Cassandra (Observed)' : 'Open-Meteo (Model)'}
@@ -243,14 +240,14 @@ function StatCard({ icon, label, value, trend, trendValue }: {
   trendValue?: string;
 }) {
   return (
-    <div className="glass-card p-4">
-      <div className="flex items-center gap-2 text-dark-400 text-sm mb-1">
+    <div className="glass-card-hover p-4">
+      <div className="flex items-center gap-2 text-neutral-500 text-sm mb-1">
         {icon}
-        <span>{label}</span>
+        <span className="font-medium text-neutral-300">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
       {trend && trendValue && (
-        <p className={`text-xs mt-1 flex items-center gap-1 ${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-green-400' : 'text-dark-500'}`}>
+        <p className={`text-xs mt-1 flex items-center gap-1 ${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-green-400' : 'text-neutral-500'}`}>
           {trend === 'up' && <TrendingUp className="w-3 h-3" />}
           {trend === 'down' && <TrendingDown className="w-3 h-3" />}
           {trend === 'neutral' && <Minus className="w-3 h-3" />}
@@ -279,8 +276,5 @@ function formatTooltipDate(timestamp: string): string {
   const date = new Date(timestamp);
   return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
-
-// Import missing icons
-import { Droplets } from 'lucide-react';
 
 export default HistoricalCharts;

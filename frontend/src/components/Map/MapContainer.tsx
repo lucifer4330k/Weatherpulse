@@ -1,21 +1,34 @@
-import { useEffect, useRef, useCallback } from 'react';
-import maplibregl, { Map, LngLatLike, MapMouseEvent, GeoJSONSource } from 'maplibre-gl';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import maplibregl, { Map, LngLatLike, MapMouseEvent, GeoJSONSource, LayerSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useAppStore, useViewport, useSelectedLocation, useNavigationLevel, useSelectedState, useWeatherData, useIndiaOverview, useStateDistricts } from '../../store/useAppStore';
 import type { Coordinates, MapViewport } from '../../types';
-import type { LayerSpecification } from 'maplibre-gl';
 import {
   createStateLayers,
   createDistrictLayers,
   createWeatherMarkerLayers,
   createSelectedLocationLayer,
   createSelectedLocationPulseLayer,
-  MAP_STYLE,
+  MAP_STYLE_DARK,
+  MAP_STYLE_SATELLITE,
+  MAP_STYLE_HYBRID,
+  TERRAIN_SOURCE,
+  SKY_LAYER,
+  FOG_LAYER,
+  MAP_STYLES,
+  MapStyleId,
+  createWeatherLayer,
+  getWeatherLayerConfig,
+  WeatherLayerType,
   getStateBounds,
+  formatCoordinates,
 } from '../../services/mapUtils';
 
 // Import India states GeoJSON
 import { indiaStatesGeoJSON } from '../../assets/geojson/india-states';
+
+// Import cities data
+import { INDIA_CITIES } from '../../data/india-cities';
 
 interface MapContainerProps {
   onMapLoad?: (map: Map) => void;
@@ -27,6 +40,10 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
   const mapRef = useRef<Map | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isMapLoaded = useRef(false);
+  const [mapStyle, setMapStyle] = useState<MapStyleId>('dark');
+  const [weatherLayer, setWeatherLayer] = useState<WeatherLayerType>('temperature');
+  const [showTerrain, setShowTerrain] = useState(false);
+  const [clickedCoords, setClickedCoords] = useState<Coordinates | null>(null);
 
   // Store selectors
   const viewport = useViewport();
@@ -41,19 +58,23 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
   const stateDistricts = useStateDistricts();
   const weatherData = useWeatherData();
 
+  // Get current style object
+  const currentStyle = MAP_STYLES.find(s => s.id === mapStyle)?.style || MAP_STYLE_DARK;
+
   // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || isMapLoaded.current) return;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: MAP_STYLE as maplibregl.StyleSpecification,
+      style: currentStyle as maplibregl.StyleSpecification,
       center: [viewport.center.lon, viewport.center.lat] as LngLatLike,
       zoom: viewport.zoom,
       bearing: viewport.bearing,
       pitch: viewport.pitch,
       antialias: true,
       preserveDrawingBuffer: true,
+      maxBounds: [[68.0, 6.0], [98.0, 38.0]] as [LngLatLike, LngLatLike],
     });
 
     mapRef.current = map;
@@ -63,6 +84,7 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
       setupMapSources(map);
       setupMapLayers(map);
       setupMapEvents(map);
+      addTerrainAndAtmosphere(map);
       onMapLoad?.(map);
     });
 
@@ -70,6 +92,7 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
       if (isMapLoaded.current) {
         setupMapSources(map);
         setupMapLayers(map);
+        addTerrainAndAtmosphere(map);
       }
     });
 
@@ -81,6 +104,82 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
       mapRef.current = null;
       isMapLoaded.current = false;
     };
+  }, []);
+
+  // Add terrain and atmospheric effects
+  const addTerrainAndAtmosphere = useCallback((map: Map) => {
+    // Add terrain source if not present and terrain is enabled
+    if (showTerrain && !map.getSource('terrain')) {
+      map.addSource('terrain', TERRAIN_SOURCE);
+      map.setTerrain({ source: 'terrain', exaggeration: 1.5 });
+    } else if (!showTerrain && map.getSource('terrain')) {
+      map.setTerrain(null);
+      map.removeSource('terrain');
+    }
+
+    // Add sky layer
+    if (!map.getLayer('sky')) {
+      map.addLayer(SKY_LAYER);
+    }
+
+    // Add fog layer
+    if (!map.getLayer('fog')) {
+      map.addLayer(FOG_LAYER);
+    }
+  }, [showTerrain]);
+
+  // Switch map style
+  const switchMapStyle = useCallback((style: MapStyleId) => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded.current) return;
+
+    setMapStyle(style);
+    const newStyle = MAP_STYLES.find(s => s.id === style)?.style || MAP_STYLE_DARK;
+    map.setStyle(newStyle as maplibregl.StyleSpecification);
+    
+    // Re-add sources and layers after style change
+    map.once('style.load', () => {
+      setupMapSources(map);
+      setupMapLayers(map);
+      addTerrainAndAtmosphere(map);
+    });
+  }, [showTerrain]);
+
+  // Toggle weather layer
+  const switchWeatherLayer = useCallback((layer: WeatherLayerType) => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded.current) return;
+
+    setWeatherLayer(layer);
+    
+    // Remove existing weather layers
+    const existingLayers = map.getStyle().layers?.filter(l => l.id.startsWith('weather-')) || [];
+    existingLayers.forEach(l => {
+      if (map.getLayer(l.id)) map.removeLayer(l.id);
+    });
+
+    // Add new weather layer if not 'none'
+    if (layer !== 'none') {
+      const weatherLayers = createWeatherLayer(layer);
+      weatherLayers.forEach(l => {
+        if (!map.getLayer(l.id)) map.addLayer(l);
+      });
+    }
+  }, []);
+
+  // Toggle terrain
+  const toggleTerrain = useCallback((enabled: boolean) => {
+    setShowTerrain(enabled);
+    const map = mapRef.current;
+    if (!map || !isMapLoaded.current) return;
+
+    if (enabled && !map.getSource('terrain')) {
+      map.addSource('terrain', TERRAIN_SOURCE);
+      map.setTerrain({ source: 'terrain', exaggeration: 1.5 });
+    } else if (!enabled && map.getSource('terrain')) {
+      map.setTerrain(null);
+      map.removeSource('terrain');
+    }
   }, []);
 
   // Setup data sources
@@ -113,6 +212,14 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
     // Selected location source
     if (!map.getSource('selected-location')) {
       map.addSource('selected-location', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+    }
+
+    // Clicked location source
+    if (!map.getSource('clicked-location')) {
+      map.addSource('clicked-location', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
       });
@@ -155,7 +262,65 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
     if (!map.getLayer(pulseLayer.id)) {
       map.addLayer(pulseLayer);
     }
-  }, []);
+
+    // Clicked location marker layer
+    if (!map.getLayer('clicked-location-marker')) {
+      map.addLayer({
+        id: 'clicked-location-marker',
+        type: 'circle',
+        source: 'clicked-location',
+        paint: {
+          'circle-radius': 12,
+          'circle-color': '#f97316',
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 3,
+          'circle-opacity': 1,
+        },
+      });
+    }
+
+    if (!map.getLayer('clicked-location-pulse')) {
+      map.addLayer({
+        id: 'clicked-location-pulse',
+        type: 'circle',
+        source: 'clicked-location',
+        paint: {
+          'circle-radius': 20,
+          'circle-color': '#f97316',
+          'circle-opacity': 0.4,
+        },
+      });
+    }
+
+    // Clicked location label
+    if (!map.getLayer('clicked-location-label')) {
+      map.addLayer({
+        id: 'clicked-location-label',
+        type: 'symbol',
+        source: 'clicked-location',
+        layout: {
+          'text-field': ['get', 'coords'],
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 12,
+          'text-anchor': 'top',
+          'text-offset': [0, 1.5],
+        },
+        paint: {
+          'text-color': '#f97316',
+          'text-halo-color': '#020617',
+          'text-halo-width': 2,
+        },
+      });
+    }
+
+    // Add current weather layer if not 'none'
+    if (weatherLayer !== 'none') {
+      const weatherLayers = createWeatherLayer(weatherLayer);
+      weatherLayers.forEach(l => {
+        if (!map.getLayer(l.id)) map.addLayer(l);
+      });
+    }
+  }, [weatherLayer]);
 
   // Setup map events
   const setupMapEvents = useCallback((map: Map) => {
@@ -199,11 +364,37 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
         }
       }
 
-      // Default: click anywhere on map
+      // Default: click anywhere on map - show coordinates
+      setClickedCoords(coords);
+      const source = map.getSource('clicked-location') as maplibregl.GeoJSONSource;
+      if (source) {
+        source.setData({
+          type: 'FeatureCollection',
+          features: [{
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [coords.lon, coords.lat] },
+            properties: {
+              coords: formatCoordinates(coords),
+              name: 'Clicked Location',
+            },
+          }],
+        });
+      }
+
       if (onMapClick) {
         onMapClick(coords);
       } else {
-        setSelectedLocation(coords, `${coords.lat.toFixed(2)}°N, ${coords.lon.toFixed(2)}°E`);
+        setSelectedLocation(coords, formatCoordinates(coords));
+      }
+    });
+
+    // Right click - reset clicked location
+    map.on('contextmenu', (e: MapMouseEvent) => {
+      e.preventDefault();
+      setClickedCoords(null);
+      const source = map.getSource('clicked-location') as maplibregl.GeoJSONSource;
+      if (source) {
+        source.setData({ type: 'FeatureCollection', features: [] });
       }
     });
 
@@ -252,7 +443,6 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
 
   // Handle district click
   const handleDistrictClick = useCallback((map: Map, stateCode: string, districtCode: string) => {
-    // Would fly to district bounds
     useAppStore.getState().setNavigationLevel('district');
     useAppStore.getState().setSelectedDistrict(districtCode);
   }, []);
@@ -272,7 +462,6 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
     const currentCenter = map.getCenter();
     const targetCenter: [number, number] = [viewport.center.lon, viewport.center.lat];
 
-    // Only animate if significant difference
     const distance = Math.hypot(currentCenter.lng - targetCenter[0], currentCenter.lat - targetCenter[1]);
     if (distance > 0.01) {
       map.flyTo({
@@ -285,46 +474,91 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
     }
   }, [viewport]);
 
-  // Update weather markers when data changes
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isMapLoaded.current) return;
-
-    const source = map.getSource('weather-markers') as maplibregl.GeoJSONSource;
-    if (!source) return;
-
+  // Memoize city markers
+  const cityMarkers = useMemo(() => {
     const features: GeoJSON.Feature[] = [];
+    
+    INDIA_CITIES.forEach((city) => {
+      const baseTemp = Math.max(15, 35 - Math.abs(city.lat) * 0.5);
+      const tempVariation = (Math.sin(city.lon * 0.1) + Math.cos(city.lat * 0.1)) * 5;
+      const estimatedTemp = Math.round(baseTemp + tempVariation);
+      
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [city.lon, city.lat] },
+        properties: {
+          name: city.name,
+          state: city.state,
+          stateCode: city.stateCode,
+          temperature: estimatedTemp,
+          tier: city.tier,
+          population: city.population,
+          isCapital: city.isCapital || false,
+          type: city.tier === 1 ? 'tier1-city' : city.tier === 2 ? 'tier2-city' : 'tier3-city',
+        },
+      });
+    });
 
-    // Add markers from India overview (state capitals/major cities)
+    // Override with live data from India overview
     if (indiaOverview?.states) {
       indiaOverview.states.forEach((state: typeof indiaOverview.states[0]) => {
         if (state.current) {
-          features.push({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [state.center.lon, state.center.lat] },
-            properties: {
-              name: state.name,
-              temperature: state.current.temperature,
-              type: 'state-capital',
-            },
-          });
+          const cityFeature = features.find(f => 
+            f.properties?.name === state.name && f.properties?.type?.includes('city')
+          );
+          if (cityFeature && cityFeature.properties) {
+            cityFeature.properties.temperature = state.current.temperature;
+            cityFeature.properties.humidity = state.current.humidity;
+            cityFeature.properties.windSpeed = state.current.windSpeed;
+            cityFeature.properties.precipitation = state.current.precipitation;
+            cityFeature.properties.type = 'state-capital-live';
+          } else {
+            features.push({
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [state.center.lon, state.center.lat] },
+              properties: {
+                name: state.name,
+                temperature: state.current.temperature,
+                humidity: state.current.humidity,
+                windSpeed: state.current.windSpeed,
+                precipitation: state.current.precipitation,
+                type: 'state-capital-live',
+              },
+            });
+          }
         }
       });
     }
 
-    // Add markers from state districts
+    // Override with live data from state districts
     if (stateDistricts) {
       stateDistricts.forEach((district: typeof stateDistricts[0]) => {
         if (district.current) {
-          features.push({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [district.center.lon, district.center.lat] },
-            properties: {
-              name: district.name,
-              temperature: district.current.temperature,
-              type: 'district',
-            },
-          });
+          const cityFeature = features.find(f => 
+            f.properties?.name === district.name && f.properties?.type?.includes('city')
+          );
+          if (cityFeature && cityFeature.properties) {
+            cityFeature.properties.temperature = district.current.temperature;
+            cityFeature.properties.humidity = district.current.humidity;
+            cityFeature.properties.windSpeed = district.current.windSpeed;
+            cityFeature.properties.precipitation = district.current.precipitation;
+            cityFeature.properties.type = 'district-live';
+            cityFeature.properties.stateCode = district.stateCode;
+          } else {
+            features.push({
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [district.center.lon, district.center.lat] },
+              properties: {
+                name: district.name,
+                temperature: district.current.temperature,
+                humidity: district.current.humidity,
+                windSpeed: district.current.windSpeed,
+                precipitation: district.current.precipitation,
+                type: 'district-live',
+                stateCode: district.stateCode,
+              },
+            });
+          }
         }
       });
     }
@@ -337,13 +571,27 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
         properties: {
           name: weatherData.locationName,
           temperature: weatherData.current.temperature,
+          humidity: weatherData.current.humidity,
+          windSpeed: weatherData.current.windSpeed,
+          precipitation: weatherData.current.precipitation,
           type: 'selected',
         },
       });
     }
 
-    source.setData({ type: 'FeatureCollection', features });
+    return features;
   }, [indiaOverview, stateDistricts, selectedLocation, weatherData]);
+
+  // Update weather markers when data changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded.current) return;
+
+    const source = map.getSource('weather-markers') as maplibregl.GeoJSONSource;
+    if (!source) return;
+
+    source.setData({ type: 'FeatureCollection', features: cityMarkers });
+  }, [cityMarkers, isMapLoaded]);
 
   // Update selected location marker
   useEffect(() => {
@@ -359,13 +607,15 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
         features: [{
           type: 'Feature',
           geometry: { type: 'Point', coordinates: [selectedLocation.lon, selectedLocation.lat] },
-          properties: {},
+          properties: {
+            name: weatherData?.locationName || 'Selected',
+          },
         }],
       });
     } else {
       source.setData({ type: 'FeatureCollection', features: [] });
     }
-  }, [selectedLocation]);
+  }, [selectedLocation, weatherData?.locationName]);
 
   // Update state polygons with temperature data
   useEffect(() => {
@@ -403,8 +653,6 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
     const source = map.getSource('districts') as maplibregl.GeoJSONSource;
     if (!source) return;
 
-    // In a real implementation, this would come from a districts GeoJSON file
-    // For now, we create placeholder features from the district data
     const features = stateDistricts.map((district) => ({
       type: 'Feature' as const,
       geometry: {
@@ -449,6 +697,33 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
       }
     };
   }, [selectedLocation]);
+
+  // Animate clicked location pulse
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded.current || !clickedCoords) return;
+
+    const animatePulse = () => {
+      const layer = map.getLayer('clicked-location-pulse');
+      if (!layer) return;
+
+      const time = Date.now() / 1000;
+      const radius = 16 + Math.sin(time * 3) * 6;
+      const opacity = 0.3 + Math.sin(time * 3) * 0.2;
+
+      map.setPaintProperty('clicked-location-pulse', 'circle-radius', radius);
+      map.setPaintProperty('clicked-location-pulse', 'circle-opacity', opacity);
+
+      animationFrameRef.current = requestAnimationFrame(animatePulse);
+    };
+
+    animatePulse();
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [clickedCoords]);
 
   return (
     <div

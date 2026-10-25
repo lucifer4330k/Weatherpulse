@@ -27,12 +27,12 @@ export function Alerts({ data }: AlertsProps) {
 
   if (alerts.length === 0) {
     return (
-      <div className="glass-card p-6 text-center">
+      <div className="glass-card p-8 text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
           <CheckCircle className="w-8 h-8 text-green-400" />
         </div>
-        <h3 className="text-dark-300 font-medium">No Active Alerts</h3>
-        <p className="text-dark-500 text-sm mt-1">No weather alerts for this location at this time</p>
+        <h3 className="text-neutral-300 font-medium">No Active Alerts</h3>
+        <p className="text-neutral-500 text-sm mt-1">No weather alerts for this location at this time</p>
       </div>
     );
   }
@@ -44,11 +44,11 @@ export function Alerts({ data }: AlertsProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-dark-300 font-medium flex items-center gap-2">
+        <h4 className="text-neutral-200 font-medium flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-yellow-400" />
           Weather Alerts ({alerts.length})
         </h4>
-        <span className="text-dark-500 text-xs">
+        <span className="text-neutral-500 text-xs">
           {alerts.filter(a => a.severity === 'extreme').length} Extreme
           {' • '}
           {alerts.filter(a => a.severity === 'severe').length} Severe
@@ -98,12 +98,12 @@ function AlertCard({ alert, isExpanded, onToggle }: { alert: WeatherAlert; isExp
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${config.color} bg-opacity-20`}>
               {config.label}
             </span>
-            <span className="text-dark-500 text-xs ml-auto">
+            <span className="text-neutral-500 text-xs ml-auto">
               {formatTimeRange(alert.startTime, alert.endTime)}
             </span>
           </div>
-          <p className="text-dark-300 text-sm">{alert.description}</p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-dark-500">
+          <p className="text-neutral-300 text-sm">{alert.description}</p>
+          <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-current" />
               Threshold: {alert.threshold}{alert.unit}
@@ -118,28 +118,28 @@ function AlertCard({ alert, isExpanded, onToggle }: { alert: WeatherAlert; isExp
             )}
           </div>
         </div>
-        <div className="flex-shrink-0 text-dark-500">
+        <div className="flex-shrink-0 text-neutral-500">
           {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-dark-700/50 px-4 pb-4 bg-dark-800/30">
+        <div className="border-t border-neutral-800/50 px-4 pb-4 bg-neutral-800/30">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-dark-500">Alert Type</p>
+              <p className="text-neutral-500">Alert Type</p>
               <p className="text-white capitalize">{alert.type}</p>
             </div>
             <div>
-              <p className="text-dark-500">Severity</p>
+              <p className="text-neutral-500">Severity</p>
               <p className={`font-medium ${config.color}`}>{config.label}</p>
             </div>
             <div>
-              <p className="text-dark-500">Started</p>
+              <p className="text-neutral-500">Started</p>
               <p className="text-white">{formatDateTime(alert.startTime)}</p>
             </div>
             <div>
-              <p className="text-dark-500">Expires</p>
+              <p className="text-neutral-500">Expires</p>
               <p className="text-white">{alert.endTime ? formatDateTime(alert.endTime) : 'Ongoing'}</p>
             </div>
           </div>

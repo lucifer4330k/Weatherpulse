@@ -2,6 +2,16 @@
 import type { Coordinates, BoundingBox } from '../types';
 import type { LayerSpecification } from 'maplibre-gl';
 
+// Type declaration for ImportMeta
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_MAPTILER_API_KEY?: string;
+  }
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
+
 // State bounds data
 export const STATE_BOUNDS: Record<string, { center: Coordinates; minLat: number; maxLat: number; minLon: number; maxLon: number }> = {
   'MH': { minLat: 15.6, maxLat: 22.1, minLon: 72.6, maxLon: 80.9, center: { lat: 19.7515, lon: 75.7139 } },
@@ -43,9 +53,158 @@ export const STATE_BOUNDS: Record<string, { center: Coordinates; minLat: number;
   'LA': { minLat: 32.2, maxLat: 33.3, minLon: 76.6, maxLon: 79.1, center: { lat: 34.2996, lon: 78.2932 } },
 };
 
+// India boundary for clipping/focus
+export const INDIA_BOUNDARY_GEOJSON: GeoJSON.FeatureCollection = {
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[
+        [68.0, 6.0],
+        [98.0, 6.0],
+        [98.0, 38.0],
+        [68.0, 38.0],
+        [68.0, 6.0]
+      ]]
+    }
+  }]
+};
+
+// Weather layer types
+export type WeatherLayerType = 'temperature' | 'rainfall' | 'humidity' | 'wind' | 'none';
+
+export interface WeatherLayerConfig {
+  id: WeatherLayerType;
+  label: string;
+  icon: string;
+  description: string;
+  colorScale: Array<[number, string]>;
+  unit: string;
+  dataField: string;
+  tooltipFormatter: (value: number) => string;
+}
+
+// Weather layer configurations
+export const WEATHER_LAYERS: WeatherLayerConfig[] = [
+  {
+    id: 'temperature',
+    label: 'Temperature',
+    icon: '🌡️',
+    description: 'Air temperature at 2m',
+    colorScale: [
+      [-10, '#061d4e'], [0, '#0d3b82'], [10, '#145db8'], [20, '#16a34a'],
+      [25, '#4ade80'], [30, '#eab308'], [35, '#f97316'], [40, '#dc2626'], [45, '#7f1d1d']
+    ],
+    unit: '°C',
+    dataField: 'temperature',
+    tooltipFormatter: (v) => `${Math.round(v)}°C`
+  },
+  {
+    id: 'rainfall',
+    label: 'Rainfall',
+    icon: '🌧️',
+    description: 'Precipitation accumulation',
+    colorScale: [
+      [0, '#1e293b'], [2.5, '#0ea5e9'], [10, '#38bdf8'], [25, '#22d3ee'],
+      [50, '#84cc16'], [75, '#eab308'], [100, '#f97316'], [200, '#ef4444']
+    ],
+    unit: 'mm',
+    dataField: 'precipitation',
+    tooltipFormatter: (v) => `${v.toFixed(1)} mm`
+  },
+  {
+    id: 'humidity',
+    label: 'Humidity',
+    icon: '💧',
+    description: 'Relative humidity',
+    colorScale: [
+      [0, '#1e293b'], [20, '#0ea5e9'], [40, '#38bdf8'], [60, '#22d3ee'],
+      [80, '#84cc16'], [90, '#eab308'], [100, '#f97316']
+    ],
+    unit: '%',
+    dataField: 'humidity',
+    tooltipFormatter: (v) => `${Math.round(v)}%`
+  },
+  {
+    id: 'wind',
+    label: 'Wind Speed',
+    icon: '💨',
+    description: 'Wind speed at 10m',
+    colorScale: [
+      [0, '#1e293b'], [5, '#0ea5e9'], [15, '#38bdf8'], [25, '#22d3ee'],
+      [40, '#84cc16'], [60, '#eab308'], [80, '#f97316'], [100, '#ef4444']
+    ],
+    unit: 'km/h',
+    dataField: 'windSpeed',
+    tooltipFormatter: (v) => `${Math.round(v)} km/h`
+  }
+];
+
+// Get weather layer config by ID
+export function getWeatherLayerConfig(type: WeatherLayerType): WeatherLayerConfig | undefined {
+  return WEATHER_LAYERS.find(l => l.id === type);
+}
+
+// Create weather layer for state polygons
+export function createWeatherLayer(layerType: WeatherLayerType): LayerSpecification[] {
+  const config = getWeatherLayerConfig(layerType);
+  if (!config || layerType === 'none') return [];
+
+  return [
+    {
+      id: `weather-${config.id}-fill`,
+      type: 'fill',
+      source: 'states',
+      paint: {
+        'fill-color': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', config.dataField], 0],
+          ...config.colorScale.flat()
+        ],
+        'fill-opacity': 0.7,
+        'fill-antialias': true,
+      },
+    },
+    {
+      id: `weather-${config.id}-outline`,
+      type: 'line',
+      source: 'states',
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          3, 0.5,
+          5, 1,
+          7, 1.5,
+          9, 2,
+        ],
+        'line-opacity': 0.6,
+        'line-blur': 0,
+      },
+    }
+  ];
+}
+
 // Convert GeoJSON to MapLibre style layers
 export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpecification[] {
   return [
+    // Base fill for all states (subtle background)
+    {
+      id: 'states-fill-base',
+      type: 'fill',
+      source: 'states',
+      paint: {
+        'fill-color': '#0a1628',
+        'fill-opacity': 0.3,
+        'fill-antialias': true,
+      },
+    },
+    // Temperature-based fill-extrusion (3D)
     {
       id: 'states-fill-extrusion',
       type: 'fill-extrusion',
@@ -55,61 +214,124 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
           'interpolate',
           ['linear'],
           ['coalesce', ['get', 'temperature'], 25],
-          -10, '#0d47a1',   // Very cold - dark blue
-          0, '#1565c0',     // Cold - blue
-          10, '#2196f3',    // Cool - light blue
-          20, '#4caf50',    // Mild - green
-          25, '#8bc34a',    // Pleasant - light green
-          30, '#ffeb3b',    // Warm - yellow
-          35, '#ff9800',    // Hot - orange
-          40, '#f44336',    // Very hot - red
-          45, '#b71c1c',    // Extreme - dark red
+          -10, '#061d4e',   // Very cold - dark blue
+          0, '#0d3b82',     // Cold - blue
+          10, '#145db8',    // Cool - medium blue
+          20, '#16a34a',    // Mild - green
+          25, '#4ade80',    // Pleasant - light green
+          30, '#eab308',    // Warm - yellow
+          35, '#f97316',    // Hot - orange
+          40, '#dc2626',    // Very hot - red
+          45, '#7f1d1d',    // Extreme - dark red
         ],
         'fill-extrusion-height': [
           'interpolate',
           ['linear'],
           ['coalesce', ['get', 'temperature'], 25],
-          -10, 50000,
-          0, 80000,
-          10, 100000,
-          20, 120000,
-          25, 150000,
-          30, 180000,
-          35, 200000,
-          40, 250000,
-          45, 300000,
+          -10, 30000,
+          0, 50000,
+          10, 70000,
+          20, 100000,
+          25, 130000,
+          30, 160000,
+          35, 190000,
+          40, 220000,
+          45, 250000,
         ],
         'fill-extrusion-base': 0,
-        'fill-extrusion-opacity': 0.7,
+        'fill-extrusion-opacity': 0.85,
+        'fill-extrusion-vertical-gradient': true,
       },
     },
+    // Sharp state boundaries - primary outline
     {
-      id: 'states-outline',
+      id: 'states-outline-sharp',
+      type: 'line',
+      source: 'states',
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          3, 0.5,
+          5, 1,
+          7, 1.5,
+          9, 2,
+        ],
+        'line-opacity': 0.9,
+        'line-blur': 0,
+      },
+    },
+    // Secondary glow outline for emphasis
+    {
+      id: 'states-outline-glow',
       type: 'line',
       source: 'states',
       paint: {
         'line-color': '#38bdf8',
-        'line-width': 1.5,
-        'line-opacity': 0.8,
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          3, 1,
+          5, 2,
+          7, 3,
+          9, 4,
+        ],
+        'line-opacity': 0.3,
+        'line-blur': 2,
       },
     },
+    // State labels with better styling
     {
       id: 'states-labels',
       type: 'symbol',
       source: 'states',
+      minzoom: 3,
       layout: {
         'text-field': ['get', 'name'],
-        'text-font': ['Noto Sans Regular'],
-        'text-size': 12,
+        'text-font': ['Noto Sans Bold'],
+        'text-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          3, 10,
+          5, 12,
+          7, 14,
+          9, 16,
+        ],
         'text-anchor': 'center',
         'text-allow-overlap': false,
         'text-ignore-placement': false,
+        'text-variable-anchor': ['center'],
+        'text-radial-offset': 0,
       },
       paint: {
-        'text-color': '#e2e8f0',
-        'text-halo-color': '#0f172a',
+        'text-color': '#f1f5f9',
+        'text-halo-color': '#020617',
         'text-halo-width': 2,
-        'text-halo-blur': 1,
+        'text-halo-blur': 0,
+      },
+    },
+    // Temperature labels for states
+    {
+      id: 'states-temp-labels',
+      type: 'symbol',
+      source: 'states',
+      minzoom: 5,
+      layout: {
+        'text-field': ['concat', ['number-format', ['coalesce', ['get', 'temperature'], 25], {}], '°'],
+        'text-font': ['Noto Sans Medium'],
+        'text-size': 11,
+        'text-anchor': 'center',
+        'text-offset': [0, 18],
+        'text-allow-overlap': true,
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': '#020617',
+        'text-halo-width': 2,
       },
     },
   ];
@@ -126,17 +348,18 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
           'interpolate',
           ['linear'],
           ['coalesce', ['get', 'temperature'], 25],
-          -10, '#0d47a1',
-          0, '#1565c0',
-          10, '#2196f3',
-          20, '#4caf50',
-          25, '#8bc34a',
-          30, '#ffeb3b',
-          35, '#ff9800',
-          40, '#f44336',
-          45, '#b71c1c',
+          -10, '#061d4e',
+          0, '#0d3b82',
+          10, '#145db8',
+          20, '#16a34a',
+          25, '#4ade80',
+          30, '#eab308',
+          35, '#f97316',
+          40, '#dc2626',
+          45, '#7f1d1d',
         ],
-        'fill-opacity': 0.6,
+        'fill-opacity': 0.7,
+        'fill-antialias': true,
       },
     },
     {
@@ -146,13 +369,14 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
       paint: {
         'line-color': '#475569',
         'line-width': 1,
-        'line-opacity': 0.6,
+        'line-opacity': 0.5,
       },
     },
     {
       id: 'districts-labels',
       type: 'symbol',
       source: 'districts',
+      minzoom: 7,
       layout: {
         'text-field': ['get', 'name'],
         'text-font': ['Noto Sans Regular'],
@@ -161,7 +385,7 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
       },
       paint: {
         'text-color': '#94a3b8',
-        'text-halo-color': '#0f172a',
+        'text-halo-color': '#020617',
         'text-halo-width': 1.5,
       },
     },
@@ -170,19 +394,21 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
 
 export function createWeatherMarkerLayers(): LayerSpecification[] {
   return [
+    // Tier 3 cities - smallest, subtle
     {
-      id: 'weather-markers',
+      id: 'weather-markers-tier3',
       type: 'circle',
       source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'tier'], 3]],
       paint: {
         'circle-radius': [
           'interpolate',
           ['linear'],
           ['zoom'],
-          4, 4,
-          6, 6,
-          8, 8,
-          10, 10,
+          4, 3,
+          6, 4,
+          8, 5,
+          10, 6,
         ],
         'circle-color': [
           'interpolate',
@@ -198,15 +424,156 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
           40, '#ef4444',
           45, '#b91c1c',
         ],
-        'circle-stroke-color': '#0f172a',
-        'circle-stroke-width': 2,
-        'circle-opacity': 0.9,
+        'circle-stroke-color': '#020617',
+        'circle-stroke-width': 1,
+        'circle-opacity': 0.7,
       },
     },
+    // Tier 2 cities - medium
+    {
+      id: 'weather-markers-tier2',
+      type: 'circle',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'tier'], 2]],
+      paint: {
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4, 4,
+          6, 6,
+          8, 7,
+          10, 8,
+        ],
+        'circle-color': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'temperature'], 25],
+          -10, '#0ea5e9',
+          0, '#38bdf8',
+          10, '#22d3ee',
+          20, '#84cc16',
+          25, '#a3e635',
+          30, '#eab308',
+          35, '#f97316',
+          40, '#ef4444',
+          45, '#b91c1c',
+        ],
+        'circle-stroke-color': '#020617',
+        'circle-stroke-width': 1.5,
+        'circle-opacity': 0.85,
+      },
+    },
+    // Tier 1 cities - larger, more prominent
+    {
+      id: 'weather-markers-tier1',
+      type: 'circle',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'tier'], 1]],
+      paint: {
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4, 5,
+          6, 7,
+          8, 9,
+          10, 11,
+        ],
+        'circle-color': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'temperature'], 25],
+          -10, '#0ea5e9',
+          0, '#38bdf8',
+          10, '#22d3ee',
+          20, '#84cc16',
+          25, '#a3e635',
+          30, '#eab308',
+          35, '#f97316',
+          40, '#ef4444',
+          45, '#b91c1c',
+        ],
+        'circle-stroke-color': '#020617',
+        'circle-stroke-width': 2,
+        'circle-opacity': 0.95,
+      },
+    },
+    // Live data cities (state capitals, districts) - most prominent with ring
+    {
+      id: 'weather-markers-live',
+      type: 'circle',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-capital-live', 'district-live']]]],
+      paint: {
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4, 6,
+          6, 8,
+          8, 10,
+          10, 12,
+        ],
+        'circle-color': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'temperature'], 25],
+          -10, '#0ea5e9',
+          0, '#38bdf8',
+          10, '#22d3ee',
+          20, '#84cc16',
+          25, '#a3e635',
+          30, '#eab308',
+          35, '#f97316',
+          40, '#ef4444',
+          45, '#b91c1c',
+        ],
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 2.5,
+        'circle-opacity': 1,
+      },
+    },
+    // Glow effect for live data
+    {
+      id: 'weather-markers-live-glow',
+      type: 'circle',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-capital-live', 'district-live']]]],
+      paint: {
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4, 12,
+          6, 16,
+          8, 20,
+          10, 24,
+        ],
+        'circle-color': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'temperature'], 25],
+          -10, '#0ea5e9',
+          0, '#38bdf8',
+          10, '#22d3ee',
+          20, '#84cc16',
+          25, '#a3e635',
+          30, '#eab308',
+          35, '#f97316',
+          40, '#ef4444',
+          45, '#b91c1c',
+        ],
+        'circle-opacity': 0.3,
+        'circle-blur': 0.5,
+      },
+    },
+    // Glow effect for all cities
     {
       id: 'weather-markers-glow',
       type: 'circle',
       source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['!', ['in', ['get', 'type'], ['literal', ['state-capital-live', 'district-live', 'selected']]]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -231,38 +598,145 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
           40, '#ef4444',
           45, '#b91c1c',
         ],
-        'circle-opacity': 0.3,
+        'circle-opacity': 0.2,
+        'circle-blur': 0.5,
       },
     },
+    // City labels for tier 1 & live
     {
-      id: 'weather-markers-pulse',
-      type: 'circle',
+      id: 'weather-marker-labels-tier1',
+      type: 'symbol',
       source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-capital-live', 'district-live']]]],
+      minzoom: 5,
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 10,
+        'text-anchor': 'top',
+        'text-offset': [0, 1.2],
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+      },
       paint: {
-        'circle-radius': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          4, 12,
-          6, 18,
-          8, 24,
-          10, 30,
-        ],
-        'circle-color': [
-          'interpolate',
-          ['linear'],
-          ['get', 'temperature'],
-          -10, '#0ea5e9',
-          0, '#38bdf8',
-          10, '#22d3ee',
-          20, '#84cc16',
-          25, '#a3e635',
-          30, '#eab308',
-          35, '#f97316',
-          40, '#ef4444',
-          45, '#b91c1c',
-        ],
-        'circle-opacity': 0.15,
+        'text-color': '#e2e8f0',
+        'text-halo-color': '#020617',
+        'text-halo-width': 1.5,
+      },
+    },
+    // City labels for tier 2
+    {
+      id: 'weather-marker-labels-tier2',
+      type: 'symbol',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
+      minzoom: 6,
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 9,
+        'text-anchor': 'top',
+        'text-offset': [0, 1.2],
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+      },
+      paint: {
+        'text-color': '#94a3b8',
+        'text-halo-color': '#020617',
+        'text-halo-width': 1.5,
+      },
+    },
+    // Temperature labels for tier 1 & live
+    {
+      id: 'weather-marker-temps-tier1',
+      type: 'symbol',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-capital-live', 'district-live']]]],
+      minzoom: 5,
+      layout: {
+        'text-field': ['concat', ['number-format', ['coalesce', ['get', 'temperature'], 25], {}], '°'],
+        'text-font': ['Noto Sans Medium'],
+        'text-size': 11,
+        'text-anchor': 'bottom',
+        'text-offset': [0, -1.2],
+        'text-allow-overlap': true,
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': '#020617',
+        'text-halo-width': 2,
+      },
+    },
+    // Temperature labels for tier 2
+    {
+      id: 'weather-marker-temps-tier2',
+      type: 'symbol',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
+      minzoom: 6,
+      layout: {
+        'text-field': ['concat', ['number-format', ['coalesce', ['get', 'temperature'], 25], {}], '°'],
+        'text-font': ['Noto Sans Medium'],
+        'text-size': 10,
+        'text-anchor': 'bottom',
+        'text-offset': [0, -1.2],
+        'text-allow-overlap': true,
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': '#020617',
+        'text-halo-width': 2,
+      },
+    },
+    // Capital indicator
+    {
+      id: 'weather-marker-capital',
+      type: 'symbol',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'isCapital'], true]],
+      minzoom: 4,
+      layout: {
+        'text-field': '★',
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 12,
+        'text-anchor': 'bottom',
+        'text-offset': [0, -1.5],
+      },
+      paint: {
+        'text-color': '#fbbf24',
+        'text-halo-color': '#020617',
+        'text-halo-width': 2,
+      },
+    },
+    // Selected location marker
+    {
+      id: 'selected-location',
+      type: 'circle',
+      source: 'selected-location',
+      paint: {
+        'circle-radius': 16,
+        'circle-color': '#ffffff',
+        'circle-stroke-color': '#0ea5e9',
+        'circle-stroke-width': 3,
+        'circle-opacity': 1,
+      },
+    },
+    // Selected location label
+    {
+      id: 'selected-location-label',
+      type: 'symbol',
+      source: 'selected-location',
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Bold'],
+        'text-size': 12,
+        'text-anchor': 'top',
+        'text-offset': [0, 1.5],
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': '#020617',
+        'text-halo-width': 2,
       },
     },
   ];
@@ -298,15 +772,15 @@ export function createSelectedLocationPulseLayer(): LayerSpecification {
 
 // Color utilities for weather
 export function getTemperatureColor(temp: number): string {
-  if (temp <= -10) return '#0d47a1';
-  if (temp <= 0) return '#1565c0';
-  if (temp <= 10) return '#2196f3';
-  if (temp <= 20) return '#4caf50';
-  if (temp <= 25) return '#8bc34a';
-  if (temp <= 30) return '#ffeb3b';
-  if (temp <= 35) return '#ff9800';
-  if (temp <= 40) return '#f44336';
-  return '#b71c1c';
+  if (temp <= -10) return '#061d4e';
+  if (temp <= 0) return '#0d3b82';
+  if (temp <= 10) return '#145db8';
+  if (temp <= 20) return '#16a34a';
+  if (temp <= 25) return '#4ade80';
+  if (temp <= 30) return '#eab308';
+  if (temp <= 35) return '#f97316';
+  if (temp <= 40) return '#dc2626';
+  return '#7f1d1d';
 }
 
 export function getPrecipitationColor(precip: number): string {
@@ -370,8 +844,9 @@ export function getWindDirectionText(degrees: number): string {
   return directions[index];
 }
 
-// Map style configuration
-export const MAP_STYLE = {
+// Map style configurations
+// Dark style (default) - using ESRI Dark Gray Canvas
+export const MAP_STYLE_DARK = {
   version: 8 as const,
   name: 'India Weather Dark',
   sources: {
@@ -403,6 +878,172 @@ export const MAP_STYLE = {
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sprite: 'https://demotiles.maplibre.org/sprite',
 };
+
+// Satellite style - ESRI World Imagery
+export const MAP_STYLE_SATELLITE = {
+  version: 8 as const,
+  name: 'India Weather Satellite',
+  sources: {
+    'esri-satellite': {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      attribution: '&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    },
+  },
+  layers: [
+    {
+      id: 'background',
+      type: 'background',
+      paint: {
+        'background-color': '#020617',
+      },
+    },
+    {
+      id: 'esri-satellite-tiles',
+      type: 'raster',
+      source: 'esri-satellite',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sprite: 'https://demotiles.maplibre.org/sprite',
+};
+
+// Hybrid style - Satellite with labels overlay
+export const MAP_STYLE_HYBRID = {
+  version: 8 as const,
+  name: 'India Weather Hybrid',
+  sources: {
+    'esri-satellite': {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      attribution: '&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    },
+    'esri-reference': {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      attribution: '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'background',
+      type: 'background',
+      paint: {
+        'background-color': '#020617',
+      },
+    },
+    {
+      id: 'esri-satellite-tiles',
+      type: 'raster',
+      source: 'esri-satellite',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+    {
+      id: 'esri-reference-tiles',
+      type: 'raster',
+      source: 'esri-reference',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sprite: 'https://demotiles.maplibre.org/sprite',
+};
+
+// MapTiler styles (require API key - use environment variable)
+export function createMapTilerStyle(style: 'satellite' | 'hybrid' | 'streets' | 'dark', apiKey?: string): maplibregl.StyleSpecification {
+  const key = apiKey || import.meta.env.VITE_MAPTILER_API_KEY || 'demo';
+  const baseUrl = `https://api.maptiler.com/maps`;
+  
+  const styleConfigs = {
+    satellite: {
+      name: 'MapTiler Satellite',
+      styleUrl: `${baseUrl}/${style}/style.json?key=${key}`,
+    },
+    hybrid: {
+      name: 'MapTiler Hybrid',
+      styleUrl: `${baseUrl}/hybrid/style.json?key=${key}`,
+    },
+    streets: {
+      name: 'MapTiler Streets',
+      styleUrl: `${baseUrl}/streets/style.json?key=${key}`,
+    },
+    dark: {
+      name: 'MapTiler Dark',
+      styleUrl: `${baseUrl}/dark/style.json?key=${key}`,
+    }
+  };
+
+  const config = styleConfigs[style];
+  
+  return {
+    version: 8,
+    name: config.name,
+    sources: {},
+    layers: [],
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sprite: 'https://demotiles.maplibre.org/sprite',
+  };
+}
+
+// Terrain/DEM source for 3D elevation
+export const TERRAIN_SOURCE = {
+  type: 'raster-dem' as const,
+  url: 'mapbox://mapbox.terrain-rgb',
+  tileSize: 256,
+  maxzoom: 14,
+  attribution: '&copy; Mapbox, &copy; OpenStreetMap contributors',
+};
+
+// Sky layer for atmospheric effect (cast as any since maplibre-gl types don't include sky type)
+export const SKY_LAYER: any = {
+  id: 'sky',
+  type: 'sky',
+  paint: {
+    'sky-type': 'atmosphere',
+    'sky-atmosphere-sun': [0, 0],
+    'sky-atmosphere-sun-intensity': 15,
+    'sky-atmosphere-halo-color': 'rgba(56, 189, 248, 0.3)',
+    'sky-atmosphere-color': 'rgba(2, 6, 23, 1)',
+  },
+};
+
+// Fog layer for atmospheric depth (cast as any since maplibre-gl types don't include fog type)
+export const FOG_LAYER: any = {
+  id: 'fog',
+  type: 'fog',
+  paint: {
+    'fog-color': '#0a1628',
+    'fog-high-color': '#1e293b',
+    'fog-ground-blend': 0.3,
+    'fog-end': 50000,
+    'fog-start': 1000,
+  },
+};
+
+// Default style (dark)
+export const MAP_STYLE = MAP_STYLE_DARK;
+
+// Available map styles for UI
+export const MAP_STYLES = [
+  { id: 'dark', name: 'Dark', icon: '🌙', style: MAP_STYLE_DARK },
+  { id: 'satellite', name: 'Satellite', icon: '🛰️', style: MAP_STYLE_SATELLITE },
+  { id: 'hybrid', name: 'Hybrid', icon: '🗺️', style: MAP_STYLE_HYBRID },
+] as const;
+
+export type MapStyleId = 'dark' | 'satellite' | 'hybrid';
 
 // Viewport constants
 export const INDIA_VIEWPORT: { center: Coordinates; zoom: number; bearing: number; pitch: number } = {
@@ -453,4 +1094,30 @@ export function calculateDistance(coord1: Coordinates, coord2: Coordinates): num
 
 function toRad(deg: number): number {
   return deg * (Math.PI / 180);
+}
+
+// Get UV index description
+export function getUVIndexDescription(uvIndex: number): { label: string; color: string; protection: string } {
+  if (uvIndex <= 2) return { label: 'Low', color: '#22c55e', protection: 'No protection needed' };
+  if (uvIndex <= 5) return { label: 'Moderate', color: '#eab308', protection: 'Seek shade midday, wear sunscreen' };
+  if (uvIndex <= 7) return { label: 'High', color: '#f97316', protection: 'Protection required, avoid midday sun' };
+  if (uvIndex <= 10) return { label: 'Very High', color: '#ef4444', protection: 'Extra protection, avoid sun 10-4' };
+  return { label: 'Extreme', color: '#a855f7', protection: 'Avoid sun exposure, full protection' };
+}
+
+// Get wind speed description
+export function getWindSpeedDescription(speed: number): { label: string; beaufort: number } {
+  if (speed < 1) return { label: 'Calm', beaufort: 0 };
+  if (speed < 6) return { label: 'Light air', beaufort: 1 };
+  if (speed < 12) return { label: 'Light breeze', beaufort: 2 };
+  if (speed < 20) return { label: 'Gentle breeze', beaufort: 3 };
+  if (speed < 29) return { label: 'Moderate breeze', beaufort: 4 };
+  if (speed < 39) return { label: 'Fresh breeze', beaufort: 5 };
+  if (speed < 50) return { label: 'Strong breeze', beaufort: 6 };
+  if (speed < 62) return { label: 'Near gale', beaufort: 7 };
+  if (speed < 75) return { label: 'Gale', beaufort: 8 };
+  if (speed < 89) return { label: 'Strong gale', beaufort: 9 };
+  if (speed < 103) return { label: 'Storm', beaufort: 10 };
+  if (speed < 118) return { label: 'Violent storm', beaufort: 11 };
+  return { label: 'Hurricane', beaufort: 12 };
 }

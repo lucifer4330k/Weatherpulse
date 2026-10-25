@@ -127,7 +127,6 @@ services:
   webserver:
     image: apache/airflow:2.7.0-python3.9
     container_name: airflow-webserver
-    command: ["webserver"]
     entrypoint: ["/bin/bash", "/opt/airflow/script/entrypoint.sh"]
     depends_on:
       postgres:
@@ -146,10 +145,11 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD-SHELL", "[ -f /opt/airflow/airflow-webserver.pid ]"]
+      test: ["CMD-SHELL", "pgrep -f 'airflow webserver'"]
       interval: 30s
-      timeout: 30s
+      timeout: 10s
       retries: 5
+      start_period: 90s
     logging:
       options:
         max-size: 10m
@@ -160,12 +160,13 @@ services:
   scheduler:
     image: apache/airflow:2.7.0-python3.9
     container_name: airflow-scheduler
+    entrypoint: ["/bin/bash", "/opt/airflow/script/scheduler-entrypoint.sh"]
     depends_on:
       webserver:
         condition: service_healthy
-    command: ["bash", "-c", "pip install --user -r /opt/airflow/requirements.txt && airflow db upgrade && exec airflow scheduler"]
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./script/scheduler-entrypoint.sh:/opt/airflow/script/scheduler-entrypoint.sh:ro
       - ./requirements.txt:/opt/airflow/requirements.txt:ro
     environment:
       LOAD_EX: "n"

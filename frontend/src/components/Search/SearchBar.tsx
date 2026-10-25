@@ -8,7 +8,7 @@ export function SearchBar() {
   const query = useSearchQuery();
   const results = useSearchResults();
   const isOpen = useIsSearchOpen();
-  const { search, clear, refetch } = useSearchLocations(query);
+  const { search, clear } = useSearchLocations(query);
   const [inputValue, setInputValue] = useState(query);
   const [showResults, setShowResults] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -16,7 +16,6 @@ export function SearchBar() {
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const storeSearch = useAppStore((state) => state.setSearchQuery);
-  const storeResults = useAppStore((state) => state.setSearchResults);
 
   // Sync input with store
   useEffect(() => {
@@ -66,7 +65,6 @@ export function SearchBar() {
     const coords = { lat: result.latitude, lon: result.longitude };
     const name = `${result.name}${result.admin1 ? `, ${result.admin1}` : ''}`;
     
-    // Use the store's navigation to fly to location
     useAppStore.getState().setSelectedLocation(coords, name);
     useAppStore.getState().setNavigationLevel('city');
     
@@ -82,7 +80,6 @@ export function SearchBar() {
   };
 
   const handleBlur = () => {
-    // Delay to allow click on results
     setTimeout(() => setShowResults(false), 200);
   };
 
@@ -103,7 +100,7 @@ export function SearchBar() {
       <div className="relative">
         <label htmlFor="search" className="sr-only">Search for a city or location in India</label>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" aria-hidden="true" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" aria-hidden="true" />
           <input
             ref={inputRef}
             id="search"
@@ -114,7 +111,7 @@ export function SearchBar() {
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder="Search city, town, or location..."
-            className="input-field pl-10 pr-12 py-3 text-base bg-dark-900/80 border-dark-600 focus:border-primary-500"
+            className="input pl-10 pr-12 py-3 text-base"
             autoComplete="off"
             aria-autocomplete="list"
             aria-controls="search-results"
@@ -128,7 +125,7 @@ export function SearchBar() {
                 storeSearch('');
                 setShowResults(false);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-dark-500 hover:text-white hover:bg-dark-700 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800/50 transition-colors"
               aria-label="Clear search"
             >
               <X className="w-5 h-5" />
@@ -143,14 +140,14 @@ export function SearchBar() {
           ref={resultsRef}
           id="search-results"
           role="listbox"
-          className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-xl border border-dark-700/50 shadow-2xl overflow-hidden z-50 animate-fade-in"
+          className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-xl border border-neutral-800/50 shadow-2xl shadow-neutral-950/50 overflow-hidden z-50 animate-fade-in"
         >
           {results.length === 0 && !isOpen ? (
-            <div className="p-4 text-center text-dark-500">
+            <div className="p-4 text-center text-neutral-500">
               Type at least 2 characters to search
             </div>
           ) : results.length === 0 && isOpen ? (
-            <div className="p-4 text-center text-dark-500 flex items-center justify-center gap-2">
+            <div className="p-4 text-center text-neutral-500 flex items-center justify-center gap-2">
               <Loader2 className="w-5 h-5 animate-spin" />
               Searching...
             </div>
@@ -163,15 +160,15 @@ export function SearchBar() {
                   aria-selected={index === selectedIndex}
                   onClick={() => selectResult(result)}
                   onMouseEnter={() => setSelectedIndex(index)}
-                  className={`px-4 py-3 hover:bg-dark-800/50 transition-colors cursor-pointer ${
-                    index === selectedIndex ? 'bg-primary-600/10' : ''
+                  className={`px-4 py-3 hover:bg-neutral-800/50 transition-colors cursor-pointer ${
+                    index === selectedIndex ? 'bg-primary-500/10' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-primary-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-medium truncate">{result.name}</p>
-                      <p className="text-dark-400 text-sm truncate">
+                      <p className="text-neutral-400 text-sm truncate">
                         {result.admin2 ? `${result.admin2}, ` : ''}
                         {result.admin1}, {result.country}
                         {result.population && result.population > 0 && (
@@ -182,7 +179,7 @@ export function SearchBar() {
                         )}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 text-dark-500 text-xs">
+                    <div className="flex items-center gap-1 text-neutral-500 text-xs font-mono tabular-nums">
                       <MapPin className="w-3.5 h-3.5" />
                       <span>{result.latitude.toFixed(2)}, {result.longitude.toFixed(2)}</span>
                     </div>
@@ -194,8 +191,8 @@ export function SearchBar() {
 
           {/* Recent searches / suggestions when empty */}
           {results.length === 0 && inputValue.length === 0 && (
-            <div className="p-3 border-t border-dark-700/30">
-              <p className="text-dark-500 text-xs mb-2">Popular locations</p>
+            <div className="p-3 border-t border-neutral-800/30">
+              <p className="text-neutral-500 text-xs mb-2 uppercase tracking-wider">Popular locations</p>
               <div className="flex flex-wrap gap-2">
                 {['Mumbai', 'Delhi', 'Bengaluru', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune', 'Ahmedabad'].map((city) => (
                   <button
@@ -205,7 +202,7 @@ export function SearchBar() {
                       setInputValue(city);
                       storeSearch(city);
                     }}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-dark-800 text-dark-300 hover:bg-dark-700 hover:text-white transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors"
                   >
                     {city}
                   </button>

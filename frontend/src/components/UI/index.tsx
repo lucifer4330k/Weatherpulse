@@ -15,18 +15,18 @@ export function LoadingSpinner({ size = 'md', className = '' }: { size?: 'sm' | 
 
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse bg-dark-700 rounded ${className}`} />
+    <div className={`skeleton ${className}`} />
   );
 }
 
 export function ErrorMessage({ message, onRetry, className = '' }: { message: string; onRetry?: () => void; className?: string }) {
   return (
-    <div className={`glass-card p-6 text-center ${className}`}>
+    <div className={`glass-card p-8 text-center ${className}`}>
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
         <AlertTriangle className="w-8 h-8 text-red-400" />
       </div>
       <h3 className="text-white font-medium mb-1">Something went wrong</h3>
-      <p className="text-dark-400 text-sm mb-4">{message}</p>
+      <p className="text-neutral-400 text-sm mb-4">{message}</p>
       {onRetry && (
         <button onClick={onRetry} className="btn-primary">
           Try Again
@@ -48,11 +48,11 @@ export function Tooltip({ children, content, position = 'top' }: { children: Rea
 export function EmptyState({ icon, title, description, action }: { icon: ReactNode; title: string; description: string; action?: ReactNode }) {
   return (
     <div className="glass-card p-8 text-center">
-      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-dark-700/50 flex items-center justify-center">
+      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
         {icon}
       </div>
       <h3 className="text-white font-medium mb-1">{title}</h3>
-      <p className="text-dark-400 text-sm mb-4">{description}</p>
+      <p className="text-neutral-400 text-sm mb-4">{description}</p>
       {action && <div>{action}</div>}
     </div>
   );
@@ -60,11 +60,11 @@ export function EmptyState({ icon, title, description, action }: { icon: ReactNo
 
 export function Badge({ children, variant = 'default', className = '' }: { children: ReactNode; variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger'; className?: string }) {
   const variants = {
-    default: 'bg-dark-700 text-dark-300',
-    primary: 'bg-primary-600/20 text-primary-400 border border-primary-500/30',
-    success: 'bg-green-500/20 text-green-400 border border-green-500/30',
-    warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
-    danger: 'bg-red-500/20 text-red-400 border border-red-500/30',
+    default: 'bg-neutral-700 text-neutral-300',
+    primary: 'bg-primary-500/20 text-primary-300 border border-primary-500/30',
+    success: 'bg-green-500/20 text-green-300 border border-green-500/30',
+    warning: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
+    danger: 'bg-red-500/20 text-red-300 border border-red-500/30',
   };
 
   return (
@@ -83,5 +83,5 @@ export function Card({ children, className = '', padding = 'p-4' }: { children: 
 }
 
 export function Divider({ className = '' }: { className?: string }) {
-  return <hr className={`border-dark-700/50 ${className}`} />;
+  return <hr className={`divider ${className}`} />;
 }
