@@ -164,7 +164,7 @@ export function createWeatherLayer(layerType: WeatherLayerType): LayerSpecificat
           ['coalesce', ['get', config.dataField], 0],
           ...config.colorScale.flat()
         ],
-        'fill-opacity': 0.7,
+        'fill-opacity': 0.18,
         'fill-antialias': true,
       },
     },
@@ -204,13 +204,13 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
         'fill-antialias': true,
       },
     },
-    // Temperature-based fill-extrusion (3D)
+    // Temperature-based subtle geospatial tint (translucent so realistic satellite terrain shines through)
     {
       id: 'states-fill-extrusion',
-      type: 'fill-extrusion',
+      type: 'fill',
       source: 'states',
       paint: {
-        'fill-extrusion-color': [
+        'fill-color': [
           'interpolate',
           ['linear'],
           ['coalesce', ['get', 'temperature'], 25],
@@ -224,23 +224,8 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
           40, '#dc2626',    // Very hot - red
           45, '#7f1d1d',    // Extreme - dark red
         ],
-        'fill-extrusion-height': [
-          'interpolate',
-          ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
-          -10, 30000,
-          0, 50000,
-          10, 70000,
-          20, 100000,
-          25, 130000,
-          30, 160000,
-          35, 190000,
-          40, 220000,
-          45, 250000,
-        ],
-        'fill-extrusion-base': 0,
-        'fill-extrusion-opacity': 0.85,
-        'fill-extrusion-vertical-gradient': true,
+        'fill-opacity': 0.12,
+        'fill-antialias': true,
       },
     },
     // Sharp state boundaries - primary outline
@@ -998,16 +983,17 @@ export function createMapTilerStyle(style: 'satellite' | 'hybrid' | 'streets' | 
   };
 }
 
-// Terrain/DEM source for 3D elevation
+// Terrain/DEM source for 3D elevation using open AWS Terrarium tiles
 export const TERRAIN_SOURCE = {
   type: 'raster-dem' as const,
-  url: 'mapbox://mapbox.terrain-rgb',
+  tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
   tileSize: 256,
-  maxzoom: 14,
-  attribution: '&copy; Mapbox, &copy; OpenStreetMap contributors',
+  encoding: 'terrarium' as const,
+  maxzoom: 15,
+  attribution: '&copy; Mapzen, OpenStreetMap contributors',
 };
 
-// Sky layer for atmospheric effect (cast as any since maplibre-gl types don't include sky type)
+// Sky layer for atmospheric effect
 export const SKY_LAYER: any = {
   id: 'sky',
   type: 'sky',
@@ -1016,41 +1002,55 @@ export const SKY_LAYER: any = {
     'sky-atmosphere-sun': [0, 0],
     'sky-atmosphere-sun-intensity': 15,
     'sky-atmosphere-halo-color': 'rgba(56, 189, 248, 0.3)',
-    'sky-atmosphere-color': 'rgba(2, 6, 23, 1)',
+    'sky-atmosphere-color': 'rgba(7, 17, 31, 1)',
   },
 };
 
-// Fog layer for atmospheric depth (cast as any since maplibre-gl types don't include fog type)
+// Fog layer for atmospheric depth
 export const FOG_LAYER: any = {
   id: 'fog',
   type: 'fog',
   paint: {
-    'fog-color': '#0a1628',
-    'fog-high-color': '#1e293b',
-    'fog-ground-blend': 0.3,
-    'fog-end': 50000,
-    'fog-start': 1000,
+    'fog-color': '#07111F',
+    'fog-high-color': '#0D1828',
+    'fog-ground-blend': 0.25,
+    'fog-end': 60000,
+    'fog-start': 2000,
   },
 };
 
-// Default style (dark)
-export const MAP_STYLE = MAP_STYLE_DARK;
-
 // Available map styles for UI
 export const MAP_STYLES = [
-  { id: 'dark', name: 'Dark', icon: '🌙', style: MAP_STYLE_DARK },
-  { id: 'satellite', name: 'Satellite', icon: '🛰️', style: MAP_STYLE_SATELLITE },
-  { id: 'hybrid', name: 'Hybrid', icon: '🗺️', style: MAP_STYLE_HYBRID },
+  { id: 'hybrid', name: 'Satellite Hybrid', icon: '🛰️', description: 'Realistic satellite with borders and labels' },
+  { id: 'satellite', name: 'Satellite Pure', icon: '🌍', description: 'Photorealistic orbital satellite view' },
+  { id: 'dark', name: 'Dark Canvas', icon: '🌙', description: 'Deep cinematic contrast for weather data' },
 ] as const;
 
-export type MapStyleId = 'dark' | 'satellite' | 'hybrid';
+export type MapStyleId = 'hybrid' | 'satellite' | 'dark';
 
-// Viewport constants
+// Resolves style URL or specification, using MapTiler if key provided, otherwise rock-solid ESRI fallback
+export function getMapStyle(styleId: MapStyleId): string | maplibregl.StyleSpecification {
+  const maptilerKey = typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAPTILER_API_KEY;
+  if (maptilerKey && maptilerKey.trim() !== '' && maptilerKey !== 'demo') {
+    if (styleId === 'satellite') return `https://api.maptiler.com/maps/satellite/style.json?key=${maptilerKey}`;
+    if (styleId === 'hybrid') return `https://api.maptiler.com/maps/hybrid/style.json?key=${maptilerKey}`;
+    if (styleId === 'dark') return `https://api.maptiler.com/maps/dark/style.json?key=${maptilerKey}`;
+  }
+  
+  if (styleId === 'satellite') return MAP_STYLE_SATELLITE as maplibregl.StyleSpecification;
+  if (styleId === 'hybrid') return MAP_STYLE_HYBRID as maplibregl.StyleSpecification;
+  return MAP_STYLE_DARK as maplibregl.StyleSpecification;
+}
+
+// Default style (hybrid satellite)
+export const MAP_STYLE = MAP_STYLE_HYBRID;
+
+// Viewport constants - Framing all of India with a cinematic 3D perspective
 export const INDIA_VIEWPORT: { center: Coordinates; zoom: number; bearing: number; pitch: number } = {
-  center: { lat: 22.5937, lon: 78.9629 },
-  zoom: 4,
+  center: { lat: 21.0, lon: 78.9629 },
+  zoom: 4.6,
   bearing: 0,
-  pitch: 45,
+  pitch: 38,
 };
 
 export const INDIA_BOUNDS: BoundingBox = {

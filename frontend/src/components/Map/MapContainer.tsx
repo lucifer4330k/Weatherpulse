@@ -17,6 +17,7 @@ import {
   FOG_LAYER,
   MAP_STYLES,
   MapStyleId,
+  getMapStyle,
   createWeatherLayer,
   getWeatherLayerConfig,
   WeatherLayerType,
@@ -33,15 +34,25 @@ import { INDIA_CITIES } from '../../data/india-cities';
 interface MapContainerProps {
   onMapLoad?: (map: Map) => void;
   onMapClick?: (coords: Coordinates) => void;
+  mapStyle?: MapStyleId;
+  weatherLayer?: WeatherLayerType;
+  is3D?: boolean;
 }
 
-export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
+export function MapContainer({ 
+  onMapLoad, 
+  onMapClick,
+  mapStyle: propMapStyle,
+  weatherLayer: propWeatherLayer,
+  is3D = true,
+}: MapContainerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isMapLoaded = useRef(false);
-  const [mapStyle, setMapStyle] = useState<MapStyleId>('dark');
-  const [weatherLayer, setWeatherLayer] = useState<WeatherLayerType>('temperature');
+  const [mapStyle, setMapStyle] = useState<MapStyleId>(propMapStyle || 'hybrid');
+  const [weatherLayer, setWeatherLayer] = useState<WeatherLayerType>(propWeatherLayer || 'temperature');
   const [showTerrain, setShowTerrain] = useState(false);
   const [clickedCoords, setClickedCoords] = useState<Coordinates | null>(null);
 
@@ -58,8 +69,29 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
   const stateDistricts = useStateDistricts();
   const weatherData = useWeatherData();
 
-  // Get current style object
-  const currentStyle = MAP_STYLES.find(s => s.id === mapStyle)?.style || MAP_STYLE_DARK;
+  // Get current style object via getMapStyle
+  const currentStyle = getMapStyle(mapStyle);
+
+  // Sync map style prop
+  useEffect(() => {
+    if (propMapStyle && propMapStyle !== mapStyle) {
+      switchMapStyle(propMapStyle);
+    }
+  }, [propMapStyle]);
+
+  // Sync weather layer prop
+  useEffect(() => {
+    if (propWeatherLayer && propWeatherLayer !== weatherLayer) {
+      switchWeatherLayer(propWeatherLayer);
+    }
+  }, [propWeatherLayer]);
+
+  // Sync 3D pitch prop
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded.current) return;
+    map.easeTo({ pitch: is3D ? 38 : 0, duration: 600 });
+  }, [is3D]);
 
   // Initialize map
   useEffect(() => {
@@ -67,11 +99,11 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: currentStyle as maplibregl.StyleSpecification,
+      style: currentStyle as any,
       center: [viewport.center.lon, viewport.center.lat] as LngLatLike,
       zoom: viewport.zoom,
       bearing: viewport.bearing,
-      pitch: viewport.pitch,
+      pitch: is3D ? 38 : 0,
       antialias: true,
       preserveDrawingBuffer: true,
       maxBounds: [[68.0, 6.0], [98.0, 38.0]] as [LngLatLike, LngLatLike],
@@ -100,6 +132,7 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      popupRef.current?.remove();
       map.remove();
       mapRef.current = null;
       isMapLoaded.current = false;
@@ -134,8 +167,8 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
     if (!map || !isMapLoaded.current) return;
 
     setMapStyle(style);
-    const newStyle = MAP_STYLES.find(s => s.id === style)?.style || MAP_STYLE_DARK;
-    map.setStyle(newStyle as maplibregl.StyleSpecification);
+    const newStyle = getMapStyle(style);
+    map.setStyle(newStyle as any);
     
     // Re-add sources and layers after style change
     map.once('style.load', () => {
@@ -398,20 +431,67 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
       }
     });
 
-    // Hover effects
+    // Hover popup
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 14,
+      className: 'geo-map-popup',
+    });
+    popupRef.current = popup;
+
+    // Hover effects with rich tooltip
     map.on('mousemove', (e: MapMouseEvent) => {
-      const stateFeatures = map.queryRenderedFeatures(e.point, { layers: ['states-fill-extrusion'] });
-      map.getCanvas().style.cursor = stateFeatures.length > 0 ? 'pointer' : '';
-
-      const districtFeatures = map.queryRenderedFeatures(e.point, { layers: ['districts-fill'] });
-      if (districtFeatures.length > 0) {
-        map.getCanvas().style.cursor = 'pointer';
-      }
-
       const markerFeatures = map.queryRenderedFeatures(e.point, { layers: ['weather-markers'] });
-      if (markerFeatures.length > 0) {
+      const stateFeatures = map.queryRenderedFeatures(e.point, { layers: ['states-fill-extrusion'] });
+
+      if (markerFeatures.length > 0 && markerFeatures[0].geometry.type === 'Point') {
         map.getCanvas().style.cursor = 'pointer';
+        const props = markerFeatures[0].properties;
+        const coords = (markerFeatures[0].geometry as GeoJSON.Point).coordinates;
+        const tempText = props?.temperature != null ? `${Math.round(props.temperature)}°C` : 'N/A';
+        const humText = props?.humidity != null ? ` • ${props.humidity}% RH` : '';
+        
+        popup.setLngLat([coords[0], coords[1]])
+          .setHTML(`
+            <div style="background:#0D1828; color:#F8FAFC; padding:8px 12px; border-radius:8px; border:1px solid #1E3A5F; font-family:Inter,sans-serif; box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+              <div style="font-weight:600; font-size:12px; color:#38BDF8; margin-bottom:2px;">${props?.name || 'City'}</div>
+              <div style="font-size:11px; color:#94A3B8;">${props?.state || ''}</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:4px;">
+                <span style="font-size:16px; font-weight:700; color:#F1F5F9;">${tempText}</span>
+                <span style="font-size:10px; color:#64748B;">${humText}</span>
+              </div>
+            </div>
+          `)
+          .addTo(map);
+        return;
       }
+
+      if (stateFeatures.length > 0) {
+        map.getCanvas().style.cursor = 'pointer';
+        const props = stateFeatures[0].properties;
+        const tempText = props?.temperature != null ? `${Math.round(props.temperature)}°C` : '';
+        
+        popup.setLngLat(e.lngLat)
+          .setHTML(`
+            <div style="background:#0D1828; color:#F8FAFC; padding:6px 10px; border-radius:6px; border:1px solid #1E3A5F; font-family:Inter,sans-serif; font-size:11px;">
+              <span style="font-weight:600; color:#38BDF8;">${props?.name || props?.code || 'State'}</span>
+              ${tempText ? `<span style="margin-left:6px; font-weight:700; color:#F59E0B;">${tempText}</span>` : ''}
+            </div>
+          `)
+          .addTo(map);
+        return;
+      }
+
+      map.getCanvas().style.cursor = '';
+      popup.remove();
+    });
+
+    map.on('mouseleave', 'weather-markers', () => {
+      popup.remove();
+    });
+    map.on('mouseleave', 'states-fill-extrusion', () => {
+      popup.remove();
     });
 
     // Viewport change
@@ -474,15 +554,25 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
     }
   }, [viewport]);
 
-  // Memoize city markers
+  // Memoize city markers with real weather data
   const cityMarkers = useMemo(() => {
     const features: GeoJSON.Feature[] = [];
     
+    // Map of state code to state current weather
+    const stateWeatherMap: Record<string, any> = {};
+    if (indiaOverview?.states) {
+      indiaOverview.states.forEach((s) => {
+        if (s.code) stateWeatherMap[s.code] = s;
+      });
+    }
+
     INDIA_CITIES.forEach((city) => {
-      const baseTemp = Math.max(15, 35 - Math.abs(city.lat) * 0.5);
-      const tempVariation = (Math.sin(city.lon * 0.1) + Math.cos(city.lat * 0.1)) * 5;
-      const estimatedTemp = Math.round(baseTemp + tempVariation);
-      
+      const stateData = stateWeatherMap[city.stateCode];
+      const temp = stateData?.current?.temperature ?? null;
+      const humidity = stateData?.current?.humidity ?? null;
+      const precipitation = stateData?.current?.precipitation ?? null;
+      const windSpeed = stateData?.current?.windSpeed ?? null;
+
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [city.lon, city.lat] },
@@ -490,7 +580,10 @@ export function MapContainer({ onMapLoad, onMapClick }: MapContainerProps) {
           name: city.name,
           state: city.state,
           stateCode: city.stateCode,
-          temperature: estimatedTemp,
+          temperature: temp,
+          humidity,
+          precipitation,
+          windSpeed,
           tier: city.tier,
           population: city.population,
           isCapital: city.isCapital || false,

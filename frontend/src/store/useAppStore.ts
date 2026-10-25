@@ -10,10 +10,10 @@ import type {
 } from '../types';
 
 const DEFAULT_VIEWPORT: MapViewport = {
-  center: { lat: 22.5937, lon: 78.9629 }, // Center of India
-  zoom: 4,
+  center: { lat: 21.0, lon: 78.9629 }, // Center of India (frames Kashmir to Kanyakumari)
+  zoom: 4.6,
   bearing: 0,
-  pitch: 45,
+  pitch: 38,
 };
 
 const initialState: Omit<AppState, keyof Pick<AppState, 'setViewport' | 'setSelectedLocation' | 'setNavigationLevel' | 'setSelectedState' | 'setSelectedDistrict' | 'toggleDashboard' | 'setSearchQuery' | 'setSearchResults' | 'setWeatherData' | 'setIndiaOverview' | 'setStateDistricts' | 'reset' | 'flyToIndia'>> = {
