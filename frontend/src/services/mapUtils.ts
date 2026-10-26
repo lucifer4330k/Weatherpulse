@@ -211,12 +211,13 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       source: 'states',
       paint: {
         'fill-color': [
-          'case', ['has', 'temperature'],
+          'case',
+          ['!=', ['get', 'temperature'], ['literal', null]],
           ['interpolate', ['linear'], ['get', 'temperature'],
             -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
-            25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d',
+            25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d'
           ],
-          '#334155',
+          '#334155'
         ],
         'fill-opacity': 0.12,
         'fill-antialias': true,
@@ -299,7 +300,7 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       type: 'symbol',
       source: 'states',
       minzoom: 5,
-      filter: ['has', 'temperature'],
+      filter: ['!=', ['get', 'temperature'], ['literal', null]],
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
         'text-font': ['Noto Sans Medium'],
@@ -325,10 +326,11 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
       source: 'districts',
       paint: {
         'fill-color': [
-          'case', ['has', 'temperature'],
+          'case',
+          ['!=', ['get', 'temperature'], ['literal', null]],
           ['interpolate', ['linear'], ['get', 'temperature'],
             -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
-            25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d',
+            25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d'
           ],
           '#334155',
         ],
@@ -652,7 +654,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-marker-temps-tier2',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
+      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
       minzoom: 6,
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],

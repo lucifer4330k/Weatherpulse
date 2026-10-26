@@ -78,7 +78,9 @@ class CassandraClient:
         if not self.session:
             await self.connect()
 
-        cutoff_date = datetime.now() - timedelta(days=days)
+        from datetime import timezone
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff_timestamp = cutoff_date.isoformat()
         
         # Query weather data for the city
         query = f"""
@@ -90,7 +92,7 @@ class CassandraClient:
         
         try:
             statement = SimpleStatement(query, fetch_size=1000)
-            rows = list(self.session.execute(statement, [city, cutoff_date.isoformat()]))
+            rows = list(self.session.execute(statement, [city, cutoff_timestamp]))
             # Sort rows by timestamp ascending for trend display
             rows.sort(key=lambda r: r.timestamp)
             
@@ -202,9 +204,9 @@ class CassandraClient:
                     "weather_condition": row.weather_condition,
                 }
             return None
-        except Exception as e:
-            logger.error(f"Cassandra latest query error for city '{city}': {e}")
-            return None
+        except Exception:
+            logger.exception("Cassandra latest query failed for city '%s'", city)
+            raise
 
     async def get_state_summary(self, state_code: str) -> List[Dict[str, Any]]:
         """Get weather summary for cities in a state"""
@@ -224,9 +226,9 @@ class CassandraClient:
         try:
             rows = self.session.execute(query)
             return [row.city for row in rows if row.city]
-        except Exception as e:
-            logger.error(f"Cassandra get cities error: {e}")
-            return []
+        except Exception:
+            logger.exception("Cassandra get cities query failed")
+            raise
 
 # Singleton
 _cassandra_client: Optional[CassandraClient] = None

@@ -40,7 +40,7 @@ def _wind_direction_text(degrees):
     return directions[round(float(degrees) / 45) % 8]
 
 
-def fetch_weather_event(city, latitude, longitude, ingested_at):
+def fetch_weather_event(city, latitude, longitude, run_timestamp, ingested_at):
     """Fetch one real observation and normalize it to the Spark Kafka schema."""
     params = urllib.parse.urlencode({
         "latitude": latitude, "longitude": longitude,
@@ -53,12 +53,11 @@ def fetch_weather_event(city, latitude, longitude, ingested_at):
     missing = [field for field in required if current.get(field) is None]
     if missing:
         raise ValueError(f"Open-Meteo event for {city} missing fields: {', '.join(missing)}")
-    # Preserve the provider's observation time separately from the time this
-    # scheduled run ingested it.  Ingestion time is the history key, so a
-    # repeated poll cannot overwrite an earlier retained record.
+    # run_timestamp: stable scheduled-run time used as primary key (idempotent on retry)
+    # ingested_at: actual collection time when the record was produced
     return {
         "station_id": f"open-meteo-{city.lower().replace(' ', '-')}",
-        "timestamp": ingested_at,
+        "timestamp": run_timestamp,
         "source_timestamp": current["time"],
         "ingested_at": ingested_at,
         "source": "open-meteo",
@@ -91,14 +90,19 @@ def stream_weather_data():
         try:
             from airflow.operators.python import get_current_context
             logical_date = get_current_context()["logical_date"]
-            ingested_at = logical_date.astimezone(timezone.utc).isoformat()
+            # run_timestamp: stable scheduled-run time used as primary key (idempotent on retry)
+            run_timestamp = logical_date.astimezone(timezone.utc).isoformat()
+            # ingested_at: actual collection time when the record was produced
+            ingested_at = datetime.now(timezone.utc).isoformat()
         except Exception:
             # Local execution has no logical Airflow run; production retries
             # use the stable logical date above and are therefore idempotent.
-            ingested_at = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(timezone.utc)
+            run_timestamp = now.isoformat()
+            ingested_at = now.isoformat()
 
         for city, latitude, longitude in WEATHER_LOCATIONS:
-            weather_data = fetch_weather_event(city, latitude, longitude, ingested_at)
+            weather_data = fetch_weather_event(city, latitude, longitude, run_timestamp, ingested_at)
             producer.send(KAFKA_TOPIC, value=weather_data).get(timeout=10)
         logging.info("Published real weather observations for %d locations.", len(WEATHER_LOCATIONS))
 
