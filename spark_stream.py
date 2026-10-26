@@ -14,7 +14,7 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "weather_data_real")
 CASSANDRA_HOST = os.getenv("CASSANDRA_HOST", "cassandra")
 CASSANDRA_KEYSPACE = os.getenv("CASSANDRA_KEYSPACE", "spark_streams")
-CASSANDRA_TABLE = os.getenv("CASSANDRA_TABLE", "weather_data")
+CASSANDRA_TABLE = os.getenv("CASSANDRA_TABLE", "weather_data_real")
 
 
 def create_keyspace(session):

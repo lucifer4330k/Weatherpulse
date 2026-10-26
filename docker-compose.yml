@@ -263,9 +263,9 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=broker:29092
       - CASSANDRA_HOST=cassandra
       - CASSANDRA_KEYSPACE=spark_streams
-      - CASSANDRA_TABLE=weather_data
+      - CASSANDRA_TABLE=weather_data_real
       - KAFKA_TOPIC=weather_data_real
-      - SPARK_CHECKPOINT_LOCATION=/opt/spark/checkpoints/weather_data_real
+      - SPARK_CHECKPOINT_LOCATION=/opt/spark/checkpoints/weather_data_real_v2
     volumes:
       - ./spark_stream.py:/opt/spark/spark_stream.py:ro
       - spark_checkpoints:/opt/spark/checkpoints
@@ -291,6 +291,7 @@ services:
       - CASSANDRA_HOSTS=cassandra
       - CASSANDRA_PORT=9042
       - CASSANDRA_KEYSPACE=spark_streams
+      - CASSANDRA_TABLE=weather_data_real
       - CASSANDRA_USERNAME=cassandra
       - CASSANDRA_PASSWORD=cassandra
       - REDIS_URL=redis://redis:6379/0
@@ -301,10 +302,10 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/live', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
       start_period: 10s
     networks:
       - confluent

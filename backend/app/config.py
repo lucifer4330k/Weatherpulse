@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     cassandra_hosts: str = "localhost"
     cassandra_port: int = 9042
     cassandra_keyspace: str = "spark_streams"
+    cassandra_table: str = "weather_data_real"
     cassandra_username: str = "cassandra"
     cassandra_password: str = "cassandra"
 

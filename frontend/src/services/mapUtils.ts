@@ -387,7 +387,8 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'circle-color': [
           'interpolate',
           ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
           -10, '#0ea5e9',
           0, '#38bdf8',
           10, '#22d3ee',
@@ -422,7 +423,8 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'circle-color': [
           'interpolate',
           ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
           -10, '#0ea5e9',
           0, '#38bdf8',
           10, '#22d3ee',
@@ -457,7 +459,8 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'circle-color': [
           'interpolate',
           ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
           -10, '#0ea5e9',
           0, '#38bdf8',
           10, '#22d3ee',
@@ -478,7 +481,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-live',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-capital-live', 'district-live']]]],
+      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -492,7 +495,8 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'circle-color': [
           'interpolate',
           ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
           -10, '#0ea5e9',
           0, '#38bdf8',
           10, '#22d3ee',
@@ -513,7 +517,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-live-glow',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-capital-live', 'district-live']]]],
+      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -527,7 +531,8 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'circle-color': [
           'interpolate',
           ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
           -10, '#0ea5e9',
           0, '#38bdf8',
           10, '#22d3ee',
@@ -547,7 +552,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-glow',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['!', ['in', ['get', 'type'], ['literal', ['state-capital-live', 'district-live', 'selected']]]]],
+      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['!', ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live', 'selected']]]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -561,7 +566,8 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'circle-color': [
           'interpolate',
           ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
           -10, '#0ea5e9',
           0, '#38bdf8',
           10, '#22d3ee',
@@ -625,7 +631,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-marker-temps-tier1',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-capital-live', 'district-live']]]],
+      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live']]]],
       minzoom: 5,
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],

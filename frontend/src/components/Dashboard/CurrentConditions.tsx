@@ -76,14 +76,14 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
   const windDirectionText = current.windDirectionText || getWindDirectionText(windDirection);
   const weatherDescription = current.weatherDescription;
   const weatherCode = current.weatherCode;
-  const visibility = current.visibility ?? 10;
+  const visibility = current.visibility;
   const cloudCover = current.cloudCover ?? 0;
-  const uvIndex = current.uvIndex ?? 0;
+  const uvIndex = current.uvIndex;
   const precipitation = current.precipitation;
   const pressure = current.pressure;
   const humidity = current.humidity;
 
-  const uvInfo = getUVIndexDescription(uvIndex);
+  const uvInfo = uvIndex == null ? null : getUVIndexDescription(uvIndex);
   const windInfo = getWindSpeedDescription(windSpeed);
 
   // Get next few hours for trend
@@ -177,8 +177,8 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
         <WeatherDetailCard
           icon={<Eye className="w-5 h-5 text-purple-400" />}
           label="Visibility"
-          value={`${visibility} km`}
-          description={getVisibilityDescription(visibility)}
+          value={visibility == null ? 'N/A' : `${visibility.toFixed(1)} km`}
+          description={visibility == null ? 'Data unavailable' : getVisibilityDescription(visibility)}
         />
         <WeatherDetailCard
           icon={<Cloud className="w-5 h-5 text-indigo-400" />}
@@ -189,9 +189,9 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
         <WeatherDetailCard
           icon={<SunIcon className="w-5 h-5 text-orange-400" />}
           label="UV Index"
-          value={`${uvIndex}`}
-          description={`${uvInfo.label} • ${uvInfo.protection}`}
-          valueColor={uvInfo.color}
+          value={uvIndex == null ? 'N/A' : `${uvIndex}`}
+          description={uvInfo ? `${uvInfo.label} • ${uvInfo.protection}` : 'Data unavailable'}
+          valueColor={uvInfo?.color}
         />
         <WeatherDetailCard
           icon={<Droplet className="w-5 h-5 text-emerald-400" />}

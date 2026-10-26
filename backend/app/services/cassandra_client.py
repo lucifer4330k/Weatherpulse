@@ -14,6 +14,7 @@ class CassandraClient:
         self.cluster: Optional[Cluster] = None
         self.session: Optional[Session] = None
         self.keyspace = settings.cassandra_keyspace
+        self.table = settings.cassandra_table
 
     async def connect(self):
         """Connect to Cassandra cluster and ensure schema exists"""
@@ -40,9 +41,12 @@ class CassandraClient:
 
             # Ensure table exists
             self.session.execute(f"""
-                CREATE TABLE IF NOT EXISTS {self.keyspace}.weather_data (
+                CREATE TABLE IF NOT EXISTS {self.keyspace}.{self.table} (
                     station_id TEXT,
                     timestamp TEXT,
+                    source_timestamp TEXT,
+                    ingested_at TEXT,
+                    source TEXT,
                     city TEXT,
                     country TEXT,
                     latitude FLOAT,
@@ -78,11 +82,10 @@ class CassandraClient:
         
         # Query weather data for the city
         query = f"""
-        SELECT station_id, timestamp, city, country, latitude, longitude,
+        SELECT station_id, timestamp, source_timestamp, ingested_at, source, city, country, latitude, longitude,
                temperature, humidity, pressure, wind_speed, wind_direction, precipitation, weather_condition
-        FROM {self.keyspace}.weather_data
+        FROM {self.keyspace}.{self.table}
         WHERE city = %s AND timestamp >= %s
-        ALLOW FILTERING
         """
         
         try:
@@ -96,7 +99,9 @@ class CassandraClient:
             humidity_data = []
             
             for row in rows:
-                timestamp = datetime.fromisoformat(row.timestamp.replace("Z", "+00:00"))
+                # This table's timeline is collection history. `source_timestamp`
+                # remains available for provenance without mislabelling it.
+                timestamp = datetime.fromisoformat((row.ingested_at or row.timestamp).replace("Z", "+00:00"))
                 
                 temp_data.append(HistoricalDataPoint(
                     timestamp=timestamp,
@@ -166,9 +171,9 @@ class CassandraClient:
 
         # Query latest record for city (ordered by clustered timestamp DESC)
         query = f"""
-        SELECT station_id, timestamp, city, country, latitude, longitude,
+        SELECT station_id, timestamp, source_timestamp, ingested_at, source, city, country, latitude, longitude,
                temperature, humidity, pressure, wind_speed, wind_direction, precipitation, weather_condition
-        FROM {self.keyspace}.weather_data
+        FROM {self.keyspace}.{self.table}
         WHERE city = %s
         LIMIT 1
         """
@@ -181,6 +186,9 @@ class CassandraClient:
                 return {
                     "station_id": str(row.station_id),
                     "timestamp": row.timestamp,
+                    "source_timestamp": row.source_timestamp,
+                    "ingested_at": row.ingested_at,
+                    "source": row.source,
                     "city": row.city,
                     "country": row.country,
                     "latitude": row.latitude,
@@ -212,7 +220,7 @@ class CassandraClient:
         if not self.session:
             await self.connect()
 
-        query = f"SELECT DISTINCT city FROM {self.keyspace}.weather_data"
+        query = f"SELECT DISTINCT city FROM {self.keyspace}.{self.table}"
         try:
             rows = self.session.execute(query)
             return [row.city for row in rows if row.city]
