@@ -711,8 +711,8 @@ export function MapContainer({
         ...feature,
         properties: {
           ...feature.properties,
-          temperature: stateData?.current?.temperature ?? 25,
-          humidity: stateData?.current?.humidity ?? 60,
+          temperature: stateData?.current?.temperature ?? null,
+          humidity: stateData?.current?.humidity ?? null,
           alertLevel: stateData?.alertLevel ?? 'none',
         },
       };
@@ -739,7 +739,7 @@ export function MapContainer({
         code: district.code,
         name: district.name,
         stateCode: district.stateCode,
-        temperature: district.current?.temperature ?? 25,
+        temperature: district.current?.temperature ?? null,
         alertLevel: district.alertLevel,
       },
     }));

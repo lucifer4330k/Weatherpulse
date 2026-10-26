@@ -13,10 +13,11 @@ async def health_check():
     
     services = {}
     
-    # Check Open-Meteo (with short timeout)
+    # Probe the dashboard's actual current-weather path. The geocoder returns
+    # an empty list on failures, so it is not a reliable readiness signal.
     try:
         client = await get_open_meteo_client()
-        await asyncio.wait_for(client.geocode("Delhi", limit=1), timeout=5.0)
+        await asyncio.wait_for(client.get_current_weather(28.6139, 77.2090), timeout=8.0)
         services["open_meteo"] = "healthy"
     except Exception as e:
         services["open_meteo"] = f"unhealthy: {str(e)}"
@@ -57,7 +58,9 @@ async def health_check():
 async def readiness_check():
     """Return ready only when mandatory serving dependencies are available."""
     health = await health_check()
-    if health.status != "healthy":
+    # Local-cache fallback is an acceptable serving mode; weather and history
+    # dependencies are the mandatory readiness requirements.
+    if any(health.services.get(name) != "healthy" for name in ("open_meteo", "cassandra")):
         from fastapi import HTTPException
         raise HTTPException(status_code=503, detail={"status": "not_ready", "services": health.services})
     return {"status": "ready"}

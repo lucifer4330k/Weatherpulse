@@ -2,7 +2,7 @@ import json
 import os
 import urllib.parse
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from kafka import KafkaProducer
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -25,6 +25,7 @@ logging.basicConfig(level=logging.INFO)
 # Kafka producer setup
 AIRFLOW_ORCHESTRATOR = True  # Determine orchestration provider
 KAFKA_HOSTS = [os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")]
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "weather_data_real")
 WEATHER_LOCATIONS = (
     ("Delhi", 28.6139, 77.2090),
     ("Mumbai", 19.0760, 72.8777),
@@ -52,9 +53,16 @@ def fetch_weather_event(city, latitude, longitude):
     missing = [field for field in required if current.get(field) is None]
     if missing:
         raise ValueError(f"Open-Meteo event for {city} missing fields: {', '.join(missing)}")
+    # Preserve the provider's observation time separately from the time this
+    # scheduled run ingested it.  Ingestion time is the history key, so a
+    # repeated poll cannot overwrite an earlier retained record.
+    ingested_at = datetime.now(timezone.utc).isoformat()
     return {
         "station_id": f"open-meteo-{city.lower().replace(' ', '-')}",
-        "timestamp": current["time"],
+        "timestamp": ingested_at,
+        "source_timestamp": current["time"],
+        "ingested_at": ingested_at,
+        "source": "open-meteo",
         "location": {
             "city": city, "country": "India", "latitude": float(latitude), "longitude": float(longitude),
         },
@@ -83,7 +91,7 @@ def stream_weather_data():
         producer = create_kafka_producer()
         for city, latitude, longitude in WEATHER_LOCATIONS:
             weather_data = fetch_weather_event(city, latitude, longitude)
-            producer.send("weather_data", value=weather_data).get(timeout=10)
+            producer.send(KAFKA_TOPIC, value=weather_data).get(timeout=10)
         logging.info("Published real weather observations for %d locations.", len(WEATHER_LOCATIONS))
 
     except Exception as e:

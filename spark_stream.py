@@ -11,7 +11,7 @@ from pyspark.sql.types import (
 )
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "weather_data")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "weather_data_real")
 CASSANDRA_HOST = os.getenv("CASSANDRA_HOST", "cassandra")
 CASSANDRA_KEYSPACE = os.getenv("CASSANDRA_KEYSPACE", "spark_streams")
 CASSANDRA_TABLE = os.getenv("CASSANDRA_TABLE", "weather_data")
@@ -33,6 +33,9 @@ def create_table(session):
     CREATE TABLE IF NOT EXISTS {CASSANDRA_KEYSPACE}.{CASSANDRA_TABLE} (
         station_id TEXT,
         timestamp TEXT,
+        source_timestamp TEXT,
+        ingested_at TEXT,
+        source TEXT,
         city TEXT,
         country TEXT,
         latitude FLOAT,
@@ -49,6 +52,14 @@ def create_table(session):
     """
     )
     print("Weather data table created successfully!")
+
+
+def ensure_provenance_columns(session):
+    """Safely migrate databases created before provenance was recorded."""
+    columns = session.cluster.metadata.keyspaces[CASSANDRA_KEYSPACE].tables[CASSANDRA_TABLE].columns
+    for name in ("source_timestamp", "ingested_at", "source"):
+        if name not in columns:
+            session.execute(f"ALTER TABLE {CASSANDRA_KEYSPACE}.{CASSANDRA_TABLE} ADD {name} TEXT")
 
 
 def create_spark_connection():
@@ -105,6 +116,9 @@ def create_selection_df_from_kafka(spark_df):
         [
             StructField("station_id", StringType(), False),
             StructField("timestamp", StringType(), False),
+            StructField("source_timestamp", StringType(), False),
+            StructField("ingested_at", StringType(), False),
+            StructField("source", StringType(), False),
             StructField(
                 "location",
                 StructType(
@@ -135,6 +149,9 @@ def create_selection_df_from_kafka(spark_df):
     flattened_df = parsed_df.select(
         col("data.station_id"),
         col("data.timestamp"),
+        col("data.source_timestamp"),
+        col("data.ingested_at"),
+        col("data.source"),
         col("data.location.city").alias("city"),
         col("data.location.country").alias("country"),
         col("data.location.latitude").alias("latitude"),
@@ -152,7 +169,8 @@ def create_selection_df_from_kafka(spark_df):
     # records before the Cassandra sink so invalid primary keys do not stop a
     # micro-batch and make the stream appear healthy while writing nothing.
     return flattened_df.filter(
-        "station_id IS NOT NULL AND timestamp IS NOT NULL AND city IS NOT NULL "
+        "station_id IS NOT NULL AND timestamp IS NOT NULL AND source_timestamp IS NOT NULL "
+        "AND ingested_at IS NOT NULL AND source = 'open-meteo' AND city IS NOT NULL "
         "AND country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL "
         "AND temperature IS NOT NULL AND humidity IS NOT NULL AND pressure IS NOT NULL "
         "AND wind_speed IS NOT NULL AND wind_direction IS NOT NULL "
@@ -166,6 +184,7 @@ def start_spark_stream():
     try:
         create_keyspace(session)
         create_table(session)
+        ensure_provenance_columns(session)
     except Exception as e:
         logging.exception("Could not initialize Cassandra schema")
         raise
@@ -184,7 +203,7 @@ def start_spark_stream():
     try:
         streaming_query = (
             selection_df.writeStream.format("org.apache.spark.sql.cassandra")
-            .option("checkpointLocation", os.getenv("SPARK_CHECKPOINT_LOCATION", "/opt/spark/checkpoints/weather_data"))
+            .option("checkpointLocation", os.getenv("SPARK_CHECKPOINT_LOCATION", "/opt/spark/checkpoints/weather_data_real"))
             .option("keyspace", CASSANDRA_KEYSPACE)
             .option("table", CASSANDRA_TABLE)
             .start()

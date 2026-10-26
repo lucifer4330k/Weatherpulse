@@ -71,8 +71,9 @@ class OpenMeteoClient:
             "current": (
                 "temperature_2m,relative_humidity_2m,apparent_temperature,"
                 "precipitation,weather_code,wind_speed_10m,wind_direction_10m,"
-                "surface_pressure,cloud_cover,is_day,visibility,uv_index"
+                "surface_pressure,cloud_cover,is_day"
             ),
+            "hourly": "visibility,uv_index",
             "timezone": "auto",
             "wind_speed_unit": "kmh",
             "precipitation_unit": "mm",
@@ -94,7 +95,7 @@ class OpenMeteoClient:
         required = (
             "time", "temperature_2m", "relative_humidity_2m", "apparent_temperature",
             "precipitation", "weather_code", "wind_speed_10m", "wind_direction_10m",
-            "surface_pressure", "cloud_cover", "is_day", "visibility", "uv_index",
+            "surface_pressure", "cloud_cover", "is_day",
         )
         missing = [field for field in required if cw.get(field) is None]
         if missing:
@@ -102,6 +103,19 @@ class OpenMeteoClient:
 
         current_time = cw["time"]
         weather_code = cw["weather_code"]
+        hourly = data.get("hourly") or {}
+        try:
+            time_index = hourly.get("time", []).index(current_time)
+        except ValueError:
+            # Never attach a value from a different hour to this observation.
+            time_index = None
+
+        def hourly_value(name: str) -> Optional[float]:
+            values = hourly.get(name, [])
+            if time_index is None or time_index >= len(values):
+                return None
+            return values[time_index]
+
         return CurrentWeather(
             temperature=cw["temperature_2m"],
             feels_like=cw["apparent_temperature"],
@@ -116,9 +130,9 @@ class OpenMeteoClient:
             is_day=bool(cw["is_day"]),
             time=datetime.fromisoformat(current_time.replace("Z", "+00:00")),
             source=WeatherSource.OPEN_METEO,
-            visibility=cw["visibility"] / 1000,
+            visibility=(hourly_value("visibility") / 1000) if hourly_value("visibility") is not None else None,
             cloud_cover=cw["cloud_cover"],
-            uv_index=cw["uv_index"],
+            uv_index=hourly_value("uv_index"),
         )
 
     # Forecast

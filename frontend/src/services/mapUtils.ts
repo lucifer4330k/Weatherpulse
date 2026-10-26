@@ -211,18 +211,12 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       source: 'states',
       paint: {
         'fill-color': [
-          'interpolate',
-          ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
-          -10, '#061d4e',   // Very cold - dark blue
-          0, '#0d3b82',     // Cold - blue
-          10, '#145db8',    // Cool - medium blue
-          20, '#16a34a',    // Mild - green
-          25, '#4ade80',    // Pleasant - light green
-          30, '#eab308',    // Warm - yellow
-          35, '#f97316',    // Hot - orange
-          40, '#dc2626',    // Very hot - red
-          45, '#7f1d1d',    // Extreme - dark red
+          'case', ['has', 'temperature'],
+          ['interpolate', ['linear'], ['get', 'temperature'],
+            -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
+            25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d',
+          ],
+          '#334155',
         ],
         'fill-opacity': 0.12,
         'fill-antialias': true,
@@ -305,8 +299,9 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       type: 'symbol',
       source: 'states',
       minzoom: 5,
+      filter: ['has', 'temperature'],
       layout: {
-        'text-field': ['concat', ['number-format', ['coalesce', ['get', 'temperature'], 25], {}], '°'],
+        'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
         'text-font': ['Noto Sans Medium'],
         'text-size': 11,
         'text-anchor': 'center',
@@ -330,18 +325,12 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
       source: 'districts',
       paint: {
         'fill-color': [
-          'interpolate',
-          ['linear'],
-          ['coalesce', ['get', 'temperature'], 25],
-          -10, '#061d4e',
-          0, '#0d3b82',
-          10, '#145db8',
-          20, '#16a34a',
-          25, '#4ade80',
-          30, '#eab308',
-          35, '#f97316',
-          40, '#dc2626',
-          45, '#7f1d1d',
+          'case', ['has', 'temperature'],
+          ['interpolate', ['linear'], ['get', 'temperature'],
+            -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
+            25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d',
+          ],
+          '#334155',
         ],
         'fill-opacity': 0.7,
         'fill-antialias': true,
@@ -592,7 +581,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-marker-labels-tier1',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-capital-live', 'district-live']]]],
+      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live']]]],
       minzoom: 5,
       layout: {
         'text-field': ['get', 'name'],
@@ -639,7 +628,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       filter: ['all', ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-capital-live', 'district-live']]]],
       minzoom: 5,
       layout: {
-        'text-field': ['concat', ['number-format', ['coalesce', ['get', 'temperature'], 25], {}], '°'],
+        'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
         'text-font': ['Noto Sans Medium'],
         'text-size': 11,
         'text-anchor': 'bottom',
@@ -657,10 +646,10 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-marker-temps-tier2',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
+      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
       minzoom: 6,
       layout: {
-        'text-field': ['concat', ['number-format', ['coalesce', ['get', 'temperature'], 25], {}], '°'],
+        'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
         'text-font': ['Noto Sans Medium'],
         'text-size': 10,
         'text-anchor': 'bottom',

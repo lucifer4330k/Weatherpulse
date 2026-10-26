@@ -145,7 +145,10 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'airflow webserver'"]
+      # `pgrep` cannot inspect processes under the non-root airflow user in
+      # this image, even when the webserver is healthy. Probe Airflow's own
+      # health endpoint instead.
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)\""]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -241,7 +244,10 @@ services:
 
   # Spark Streaming job (Kafka -> Spark -> Cassandra)
   spark-streaming:
-    image: apache/spark:3.4.1-python3
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
+    image: weatherpulse-spark-streaming
     hostname: spark-streaming
     container_name: spark-streaming
     depends_on:
@@ -258,7 +264,8 @@ services:
       - CASSANDRA_HOST=cassandra
       - CASSANDRA_KEYSPACE=spark_streams
       - CASSANDRA_TABLE=weather_data
-      - SPARK_CHECKPOINT_LOCATION=/opt/spark/checkpoints/weather_data
+      - KAFKA_TOPIC=weather_data_real
+      - SPARK_CHECKPOINT_LOCATION=/opt/spark/checkpoints/weather_data_real
     volumes:
       - ./spark_stream.py:/opt/spark/spark_stream.py:ro
       - spark_checkpoints:/opt/spark/checkpoints
