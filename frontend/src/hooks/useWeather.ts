@@ -10,10 +10,12 @@ import {
   getStateDistricts,
   getCassandraHistorical,
   getCassandraLatest,
+  getCassandraLatestBatch,
   getCassandraCities,
   healthCheck,
 } from '../services/api';
-import type { Coordinates, WeatherDashboardData, IndiaOverviewResponse, StateWeatherSummary, DistrictWeatherSummary, WeatherTrends, WeatherAlert, CurrentWeather } from '../types';
+import type { Coordinates, WeatherDashboardData, IndiaOverviewResponse, StateWeatherSummary, DistrictWeatherSummary, WeatherTrends, WeatherAlert } from '../types';
+import type { CassandraLatestObservation } from '../services/api';
 
 // Query Keys
 export const weatherKeys = {
@@ -153,14 +155,9 @@ export function useCassandraLatest(city: string | null, enabled = true) {
 }
 
 // Cassandra Latest Multiple Cities Hook
-function fetchCassandraLatestMultiple(cities: string[]): Promise<{ [key: string]: CurrentWeather }> {
+function fetchCassandraLatestMultiple(cities: string[]): Promise<Record<string, CassandraLatestObservation>> {
   if (cities.length === 0) return Promise.resolve({});
-  const promises = cities.map(city => getCassandraLatest(city).catch(() => null));
-  return Promise.all(promises).then((results) => {
-    const result: { [key: string]: CurrentWeather } = {};
-    cities.forEach((city, index) => { if (results[index]) result[city] = results[index]; });
-    return result;
-  });
+  return getCassandraLatestBatch(cities).catch(() => ({}));
 }
 
 export function useCassandraLatestMultiple(cities: string[], enabled = true) {

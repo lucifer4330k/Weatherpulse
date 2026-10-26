@@ -702,7 +702,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
     },
     // Temperature labels for tier 1, live & city-live
     {
-      id: 'weather-marker-temps-tier1',
+      id: 'weather-marker-temps-tier1-primary',
       type: 'symbol',
       source: 'weather-markers',
       filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live', 'city-live']]]],

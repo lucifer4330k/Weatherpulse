@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 from app.models.weather import WeatherTrends
 from app.services import get_cassandra_client, get_cache_service
@@ -40,6 +40,17 @@ async def get_cassandra_latest(city: str = Query(..., description="City name")):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cassandra query failed: {str(e)}")
+
+@router.get("/latest/batch")
+async def get_cassandra_latest_batch(
+    cities: List[str] = Query(..., min_length=1, max_length=200),
+):
+    """Return latest rows for map markers in one browser request."""
+    client = await get_cassandra_client()
+    try:
+        return {"observations": await client.get_latest_for_cities(cities)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cassandra batch query failed: {str(e)}")
 
 @router.get("/cities")
 async def get_cassandra_cities():

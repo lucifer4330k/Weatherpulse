@@ -47,8 +47,8 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new ApiError(response.status, error.message || `HTTP ${response.status}`);
+    const error = await response.json().catch(() => null) as { detail?: string; message?: string } | null;
+    throw new ApiError(response.status, error?.detail || error?.message || `Request failed with HTTP ${response.status}`);
   }
 
   return toCamelCase(await response.json()) as T;
@@ -131,6 +131,32 @@ export async function getCassandraHistorical(city: string, days = 30): Promise<W
 // Cassandra Latest
 export async function getCassandraLatest(city: string): Promise<CurrentWeather> {
   return fetchApi<CurrentWeather>(`/cassandra/latest?city=${encodeURIComponent(city)}`);
+}
+
+export interface CassandraLatestObservation {
+  stationId: string;
+  timestamp: string;
+  sourceTimestamp?: string;
+  ingestedAt?: string;
+  source?: string;
+  city: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  temperature: number;
+  humidity: number;
+  pressure: number;
+  windSpeed: number;
+  windDirection: string;
+  precipitation: number;
+  weatherCondition: string;
+}
+
+export async function getCassandraLatestBatch(cities: string[]): Promise<Record<string, CassandraLatestObservation>> {
+  const params = new URLSearchParams();
+  cities.forEach((city) => params.append('cities', city));
+  const response = await fetchApi<{ observations: Record<string, CassandraLatestObservation> }>(`/cassandra/latest/batch?${params}`);
+  return response.observations;
 }
 
 // Cassandra Cities

@@ -30,7 +30,7 @@ import {
 import { indiaStatesGeoJSON } from '../../assets/geojson/india-states';
 
 // Import India districts GeoJSON
-import indiaDistrictsGeoJSON from '../../assets/geojson/india-districts.geojson';
+import indiaDistrictsGeoJSONUrl from '../../assets/geojson/india-districts.geojson?url';
 
 // Import cities data
 import { INDIA_CITIES } from '../../data/india-cities';
@@ -238,7 +238,7 @@ export function MapContainer({
     if (!map.getSource('districts')) {
       map.addSource('districts', {
         type: 'geojson',
-        data: indiaDistrictsGeoJSON,
+        data: indiaDistrictsGeoJSONUrl,
         generateId: true,
       });
     }
@@ -279,7 +279,7 @@ export function MapContainer({
     });
 
     // Add district layers
-    const districtLayers = createDistrictLayers(indiaDistrictsGeoJSON as GeoJSON.FeatureCollection);
+    const districtLayers = createDistrictLayers({ type: 'FeatureCollection', features: [] } as GeoJSON.FeatureCollection);
     districtLayers.forEach((layer) => {
       if (!map.getLayer(layer.id)) {
         map.addLayer(layer);
@@ -739,22 +739,31 @@ export function MapContainer({
     const source = map.getSource('districts') as maplibregl.GeoJSONSource;
     if (!source) return;
 
-    const features = stateDistricts.map((district) => ({
-      type: 'Feature' as const,
-      geometry: {
-        type: 'Point' as const,
-        coordinates: [district.center.lon, district.center.lat],
-      },
-      properties: {
-        code: district.code,
-        name: district.name,
-        stateCode: district.stateCode,
-        temperature: district.current?.temperature ?? null,
-        alertLevel: district.alertLevel,
-      },
-    }));
+    let cancelled = false;
+    const weatherByCode = new globalThis.Map(stateDistricts.map((district) => [district.code, district]));
+    fetch(indiaDistrictsGeoJSONUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error(`District boundary request failed: ${response.status}`);
+        return response.json() as Promise<GeoJSON.FeatureCollection>;
+      })
+      .then((geojson) => {
+        if (cancelled) return;
+        const features = geojson.features.map((feature) => {
+          const district = weatherByCode.get(feature.properties?.code as string);
+          return {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              temperature: district?.current?.temperature ?? null,
+              alertLevel: district?.alertLevel ?? 'none',
+            },
+          };
+        });
+        source.setData({ type: 'FeatureCollection', features });
+      })
+      .catch((error) => console.warn('Unable to apply district weather overlay:', error));
 
-    source.setData({ type: 'FeatureCollection', features });
+    return () => { cancelled = true; };
   }, [stateDistricts]);
 
   // Animate pulse layer for selected location

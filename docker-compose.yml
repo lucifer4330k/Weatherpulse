@@ -287,6 +287,8 @@ services:
     container_name: weather-backend
     ports:
       - "8000:8000"
+    volumes:
+      - ./frontend/public/geojson/india-districts.geojson:/app/india-districts.geojson:ro
     environment:
       - CASSANDRA_HOSTS=cassandra
       - CASSANDRA_PORT=9042

@@ -208,6 +208,15 @@ class CassandraClient:
             logger.exception("Cassandra latest query failed for city '%s'", city)
             raise
 
+    async def get_latest_for_cities(self, cities: List[str]) -> Dict[str, Dict[str, Any]]:
+        """Return the latest row for each requested city without a table scan."""
+        results: Dict[str, Dict[str, Any]] = {}
+        for city in dict.fromkeys(city.strip() for city in cities if city.strip()):
+            record = await self.get_latest_for_city(city)
+            if record is not None:
+                results[city] = record
+        return results
+
     async def get_state_summary(self, state_code: str) -> List[Dict[str, Any]]:
         """Get weather summary for cities in a state"""
         if not self.session:

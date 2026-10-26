@@ -137,7 +137,8 @@ async def get_india_overview():
     cache_key = "india:overview"
     cached = await cache.get(cache_key)
     if cached:
-        cached["timestamp"] = datetime.now().isoformat()
+        # Preserve the time at which these observations were assembled; a
+        # cache hit is not a new weather observation.
         return IndiaOverviewResponse(**cached)
     
     # Fetch weather for all states in parallel
@@ -188,7 +189,9 @@ async def get_state_districts(state_code: str):
     # Load district data from GeoJSON
     import json
     import os
-    district_geojson_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "public", "geojson", "india-districts.geojson")
+    # Compose mounts the same vetted boundary file used by the frontend at
+    # this path. This avoids relying on a directory outside the backend image.
+    district_geojson_path = os.path.join(os.path.dirname(__file__), "..", "..", "india-districts.geojson")
     
     if not os.path.exists(district_geojson_path):
         # Return empty list if district data not available
