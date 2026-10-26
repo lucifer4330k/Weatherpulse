@@ -6,6 +6,7 @@ import type { LayerSpecification } from 'maplibre-gl';
 declare global {
   interface ImportMetaEnv {
     readonly VITE_MAPTILER_API_KEY?: string;
+    readonly VITE_API_URL?: string;
   }
   interface ImportMeta {
     readonly env: ImportMetaEnv;
@@ -212,7 +213,7 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       paint: {
         'fill-color': [
           'case',
-          ['!=', ['get', 'temperature'], ['literal', null]],
+          ['!=', ['get', 'temperature'], null as any],
           ['interpolate', ['linear'], ['get', 'temperature'],
             -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
             25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d'
@@ -300,7 +301,7 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       type: 'symbol',
       source: 'states',
       minzoom: 5,
-      filter: ['!=', ['get', 'temperature'], ['literal', null]],
+      filter: ['!=', ['get', 'temperature'], null as any],
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
         'text-font': ['Noto Sans Medium'],
@@ -327,7 +328,7 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
       paint: {
         'fill-color': [
           'case',
-          ['!=', ['get', 'temperature'], ['literal', null]],
+          ['!=', ['get', 'temperature'], null as any],
           ['interpolate', ['linear'], ['get', 'temperature'],
             -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
             25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d'
@@ -478,12 +479,83 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'circle-opacity': 0.95,
       },
     },
+    // City live data - cities with real-time Cassandra data
+    {
+      id: 'weather-markers-city-live',
+      type: 'circle',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'city-live']],
+      paint: {
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4, 6,
+          6, 8,
+          8, 10,
+          10, 12,
+        ],
+        'circle-color': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
+          -10, '#0ea5e9',
+          0, '#38bdf8',
+          10, '#22d3ee',
+          20, '#84cc16',
+          25, '#a3e635',
+          30, '#eab308',
+          35, '#f97316',
+          40, '#ef4444',
+          45, '#b91c1c',
+        ],
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 2.5,
+        'circle-opacity': 1,
+      },
+    },
+    // Glow effect for city live data
+    {
+      id: 'weather-markers-city-live-glow',
+      type: 'circle',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'city-live']],
+      paint: {
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4, 12,
+          6, 16,
+          8, 20,
+          10, 24,
+        ],
+        'circle-color': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'temperature'], -999],
+          -999, '#64748b',
+          -10, '#0ea5e9',
+          0, '#38bdf8',
+          10, '#22d3ee',
+          20, '#84cc16',
+          25, '#a3e635',
+          30, '#eab308',
+          35, '#f97316',
+          40, '#ef4444',
+          45, '#b91c1c',
+        ],
+        'circle-opacity': 0.3,
+        'circle-blur': 0.5,
+      },
+    },
     // Live data cities (state capitals, districts) - most prominent with ring
     {
       id: 'weather-markers-live',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
+      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -519,7 +591,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-live-glow',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
+      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -554,7 +626,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-glow',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['!', ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live', 'selected']]]]],
+      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['!', ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live', 'city-live', 'selected']]]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -628,12 +700,12 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'text-halo-width': 1.5,
       },
     },
-    // Temperature labels for tier 1 & live
+    // Temperature labels for tier 1, live & city-live
     {
       id: 'weather-marker-temps-tier1',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live']]]],
+      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live', 'city-live']]]],
       minzoom: 5,
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
@@ -649,12 +721,54 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
         'text-halo-width': 2,
       },
     },
+    {
+      id: 'weather-marker-temps-tier1',
+      type: 'symbol',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live', 'city-live']]]],
+      minzoom: 5,
+      layout: {
+        'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
+        'text-font': ['Noto Sans Medium'],
+        'text-size': 11,
+        'text-anchor': 'bottom',
+        'text-offset': [0, -1.2],
+        'text-allow-overlap': true,
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': '#020617',
+        'text-halo-width': 2,
+      },
+    },
+    // City live labels
+    {
+      id: 'weather-marker-labels-city-live',
+      type: 'symbol',
+      source: 'weather-markers',
+      filter: ['all', ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'city-live']],
+      minzoom: 5,
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 10,
+        'text-anchor': 'top',
+        'text-offset': [0, 1.2],
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+      },
+      paint: {
+        'text-color': '#e2e8f0',
+        'text-halo-color': '#020617',
+        'text-halo-width': 1.5,
+      },
+    },
     // Temperature labels for tier 2
     {
       id: 'weather-marker-temps-tier2',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], ['literal', null]], ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
+      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
       minzoom: 6,
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],

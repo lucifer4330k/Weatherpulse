@@ -23,28 +23,16 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
   const trends = data?.trends;
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
-  if (!trends) {
-    return (
-      <div className="glass-card p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
-          <BarChart2 className="w-8 h-8 text-neutral-500" />
-        </div>
-        <h3 className="text-neutral-400 font-medium">No historical data available</h3>
-        <p className="text-neutral-500 text-sm mt-1">
-          Historical trends will appear here once data is loaded
-        </p>
-      </div>
-    );
-  }
-
   // Filter data based on selected period
   const filteredTempData = useMemo(() => {
+    if (!trends) return [];
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     return trends.temperature.data.filter((d) => new Date(d.timestamp).getTime() >= cutoff);
   }, [trends, period]);
 
   const filteredPrecipData = useMemo(() => {
+    if (!trends) return [];
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     return trends.precipitation.data.filter((d) => new Date(d.timestamp).getTime() >= cutoff);
@@ -66,6 +54,20 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
     const avg = total / filteredPrecipData.length;
     return { total, avg };
   }, [filteredPrecipData]);
+
+  if (!trends) {
+    return (
+      <div className="glass-card p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
+          <BarChart2 className="w-8 h-8 text-neutral-500" />
+        </div>
+        <h3 className="text-neutral-400 font-medium">No historical data available</h3>
+        <p className="text-neutral-500 text-sm mt-1">
+          Historical trends will appear here once data is loaded
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -240,12 +242,12 @@ function StatCard({ icon, label, value, trend, trendValue }: {
   trendValue?: string;
 }) {
   return (
-    <div className="glass-card-hover p-4">
+    <div className="glass-card p-4">
       <div className="flex items-center gap-2 text-neutral-500 text-sm mb-1">
         {icon}
-        <span className="font-medium text-neutral-300">{label}</span>
+        <span className="font-medium">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
+      <p className="text-2xl font-bold text-white">{value}</p>
       {trend && trendValue && (
         <p className={`text-xs mt-1 flex items-center gap-1 ${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-green-400' : 'text-neutral-500'}`}>
           {trend === 'up' && <TrendingUp className="w-3 h-3" />}

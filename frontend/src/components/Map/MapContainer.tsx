@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import maplibregl, { Map, LngLatLike, MapMouseEvent, GeoJSONSource, LayerSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useAppStore, useViewport, useSelectedLocation, useNavigationLevel, useSelectedState, useWeatherData, useIndiaOverview, useStateDistricts } from '../../store/useAppStore';
+import { useCassandraLatestMultiple } from '../../hooks/useWeather';
 import type { Coordinates, MapViewport } from '../../types';
 import {
   createStateLayers,
@@ -27,6 +28,9 @@ import {
 
 // Import India states GeoJSON
 import { indiaStatesGeoJSON } from '../../assets/geojson/india-states';
+
+// Import India districts GeoJSON
+import indiaDistrictsGeoJSON from '../../assets/geojson/india-districts.geojson';
 
 // Import cities data
 import { INDIA_CITIES } from '../../data/india-cities';
@@ -68,6 +72,10 @@ export function MapContainer({
   const indiaOverview = useIndiaOverview();
   const stateDistricts = useStateDistricts();
   const weatherData = useWeatherData();
+  
+  // Fetch latest Cassandra data for all cities
+  const cityNames = useMemo(() => INDIA_CITIES.map(c => c.name), []);
+  const { data: cassandraLatestMap } = useCassandraLatestMultiple(cityNames);
 
   // Get current style object via getMapStyle
   const currentStyle = getMapStyle(mapStyle);
@@ -226,11 +234,12 @@ export function MapContainer({
       });
     }
 
-    // Districts source (empty initially, loaded on demand)
+    // Districts source with actual district boundaries
     if (!map.getSource('districts')) {
       map.addSource('districts', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
+        data: indiaDistrictsGeoJSON,
+        generateId: true,
       });
     }
 
@@ -270,7 +279,7 @@ export function MapContainer({
     });
 
     // Add district layers
-    const districtLayers = createDistrictLayers({ type: 'FeatureCollection', features: [] } as GeoJSON.FeatureCollection);
+    const districtLayers = createDistrictLayers(indiaDistrictsGeoJSON as GeoJSON.FeatureCollection);
     districtLayers.forEach((layer) => {
       if (!map.getLayer(layer.id)) {
         map.addLayer(layer);
@@ -559,13 +568,14 @@ export function MapContainer({
     const features: GeoJSON.Feature[] = [];
     
     INDIA_CITIES.forEach((city) => {
-      // State overview readings are measured at state centres, not at every
-      // city in that state.  Keep city markers unmeasured until city-level
-      // data exists rather than presenting an estimate as a local reading.
-      const temp = null;
-      const humidity = null;
-      const precipitation = null;
-      const windSpeed = null;
+      // Try to get real data from Cassandra first
+      const cassandraData = cassandraLatestMap?.[city.name];
+      const hasRealData = cassandraData && cassandraData.temperature != null;
+      
+      const temp = hasRealData ? cassandraData.temperature : null;
+      const humidity = hasRealData ? cassandraData.humidity : null;
+      const precipitation = hasRealData ? cassandraData.precipitation : null;
+      const windSpeed = hasRealData ? cassandraData.windSpeed : null;
 
       features.push({
         type: 'Feature',
@@ -581,7 +591,7 @@ export function MapContainer({
           tier: city.tier,
           population: city.population,
           isCapital: city.isCapital || false,
-          type: city.tier === 1 ? 'tier1-city' : city.tier === 2 ? 'tier2-city' : 'tier3-city',
+          type: hasRealData ? 'city-live' : city.tier === 1 ? 'tier1-city' : city.tier === 2 ? 'tier2-city' : 'tier3-city',
         },
       });
     });
@@ -656,7 +666,7 @@ export function MapContainer({
     }
 
     return features;
-  }, [indiaOverview, stateDistricts, selectedLocation, weatherData]);
+  }, [indiaOverview, stateDistricts, selectedLocation, weatherData, cassandraLatestMap]);
 
   // Update weather markers when data changes
   useEffect(() => {

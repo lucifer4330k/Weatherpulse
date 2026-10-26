@@ -9,9 +9,11 @@ import {
   getStateWeather,
   getStateDistricts,
   getCassandraHistorical,
+  getCassandraLatest,
+  getCassandraCities,
   healthCheck,
 } from '../services/api';
-import type { Coordinates, WeatherDashboardData, IndiaOverviewResponse, StateWeatherSummary, DistrictWeatherSummary, WeatherTrends, WeatherAlert } from '../types';
+import type { Coordinates, WeatherDashboardData, IndiaOverviewResponse, StateWeatherSummary, DistrictWeatherSummary, WeatherTrends, WeatherAlert, CurrentWeather } from '../types';
 
 // Query Keys
 export const weatherKeys = {
@@ -24,7 +26,9 @@ export const weatherKeys = {
   indiaOverview: () => [...weatherKeys.all, 'india', 'overview'] as const,
   state: (stateCode: string) => [...weatherKeys.all, 'india', 'state', stateCode] as const,
   stateDistricts: (stateCode: string) => [...weatherKeys.all, 'india', 'state', stateCode, 'districts'] as const,
-  cassandraHistorical: (city: string, days?: number) => [...weatherKeys.all, 'cassandra', city, days] as const,
+  cassandraHistorical: (city: string, days?: number) => [...weatherKeys.all, 'cassandra', 'historical', city, days] as const,
+  cassandraLatest: (city: string) => [...weatherKeys.all, 'cassandra', 'latest', city] as const,
+  cassandraCities: () => [...weatherKeys.all, 'cassandra', 'cities'] as const,
   health: () => [...weatherKeys.all, 'health'] as const,
 };
 
@@ -132,6 +136,52 @@ export function useCassandraHistorical(city: string | null, days = 30, enabled =
     {
       enabled: enabled && city !== null,
       staleTime: 60 * 60 * 1000,
+    }
+  );
+}
+
+// Cassandra Latest Hook
+export function useCassandraLatest(city: string | null, enabled = true) {
+  return useQuery(
+    city ? weatherKeys.cassandraLatest(city) : ['weather', 'cassandra', 'latest', 'disabled'],
+    () => getCassandraLatest(city!),
+    {
+      enabled: enabled && city !== null,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    }
+  );
+}
+
+// Cassandra Latest Multiple Cities Hook
+function fetchCassandraLatestMultiple(cities: string[]): Promise<{ [key: string]: CurrentWeather }> {
+  if (cities.length === 0) return Promise.resolve({});
+  const promises = cities.map(city => getCassandraLatest(city).catch(() => null));
+  return Promise.all(promises).then((results) => {
+    const result: { [key: string]: CurrentWeather } = {};
+    cities.forEach((city, index) => { if (results[index]) result[city] = results[index]; });
+    return result;
+  });
+}
+
+export function useCassandraLatestMultiple(cities: string[], enabled = true) {
+  return useQuery(
+    cities.length > 0 ? weatherKeys.cassandraLatest(cities.join(',')) : ['weather', 'cassandra', 'latest', 'disabled'],
+    () => fetchCassandraLatestMultiple(cities),
+    {
+      enabled: enabled && cities.length > 0,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    }
+  );
+}
+
+// Cassandra Cities Hook
+export function useCassandraCities(enabled = true) {
+  return useQuery(
+    weatherKeys.cassandraCities(),
+    () => getCassandraCities(),
+    {
+      enabled,
+      staleTime: 10 * 60 * 1000, // 10 minutes
     }
   );
 }

@@ -92,16 +92,14 @@ def stream_weather_data():
             logical_date = get_current_context()["logical_date"]
             # run_timestamp: stable scheduled-run time used as primary key (idempotent on retry)
             run_timestamp = logical_date.astimezone(timezone.utc).isoformat()
-            # ingested_at: actual collection time when the record was produced
-            ingested_at = datetime.now(timezone.utc).isoformat()
         except Exception:
             # Local execution has no logical Airflow run; production retries
             # use the stable logical date above and are therefore idempotent.
-            now = datetime.now(timezone.utc)
-            run_timestamp = now.isoformat()
-            ingested_at = now.isoformat()
+            run_timestamp = datetime.now(timezone.utc).isoformat()
 
         for city, latitude, longitude in WEATHER_LOCATIONS:
+            # ingested_at: actual collection time when the record was produced (per city)
+            ingested_at = datetime.now(timezone.utc).isoformat()
             weather_data = fetch_weather_event(city, latitude, longitude, run_timestamp, ingested_at)
             producer.send(KAFKA_TOPIC, value=weather_data).get(timeout=10)
         logging.info("Published real weather observations for %d locations.", len(WEATHER_LOCATIONS))

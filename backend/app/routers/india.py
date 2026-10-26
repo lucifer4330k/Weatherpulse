@@ -185,9 +185,85 @@ async def get_state_districts(state_code: str):
     if not state:
         raise HTTPException(status_code=404, detail=f"State {state_code} not found")
     
-    # This would need actual district data - returning empty for now
-    # In production, load from district GeoJSON and fetch weather for each
-    return []
+    # Load district data from GeoJSON
+    import json
+    import os
+    district_geojson_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "public", "geojson", "india-districts.geojson")
+    
+    if not os.path.exists(district_geojson_path):
+        # Return empty list if district data not available
+        return []
+    
+    with open(district_geojson_path, 'r') as f:
+        district_data = json.load(f)
+    
+    # Filter districts for this state
+    state_districts = [
+        d for d in district_data.get("features", []) 
+        if d.get("properties", {}).get("state_code") == state_code
+    ]
+    
+    if not state_districts:
+        return []
+    
+    # Fetch weather for each district
+    client = await get_open_meteo_client()
+    district_summaries = []
+    
+    for district in state_districts:
+        props = district.get("properties", {})
+        geometry = district.get("geometry", {})
+        
+        if not geometry or geometry.get("type") != "Polygon":
+            continue
+            
+        # Calculate district center from polygon bounds
+        coords = geometry.get("coordinates", [[]])[0]
+        if not coords:
+            continue
+            
+        lons = [c[0] for c in coords]
+        lats = [c[1] for c in coords]
+        center_lon = sum(lons) / len(lons)
+        center_lat = sum(lats) / len(lats)
+        
+        try:
+            current = await client.get_current_weather(center_lat, center_lon)
+            
+            # Determine alert level
+            alert_level = "none"
+            if current.temperature >= 45 or current.precipitation >= 100:
+                alert_level = "extreme"
+            elif current.temperature >= 40 or current.precipitation >= 50 or current.wind_speed >= 90:
+                alert_level = "high"
+            elif current.temperature >= 35 or current.precipitation >= 25 or current.wind_speed >= 60:
+                alert_level = "moderate"
+            elif current.temperature >= 30 or current.precipitation >= 10 or current.wind_speed >= 30:
+                alert_level = "low"
+            
+            district_summaries.append(DistrictWeatherSummary(
+                code=props.get("code", ""),
+                name=props.get("name", ""),
+                state_code=state_code,
+                center=Coordinates(lat=center_lat, lon=center_lon),
+                bounds={},  # Could compute from geometry
+                current=current,
+                alert_level=alert_level,
+            ))
+        except Exception as e:
+            logger.warning(f"Failed to fetch weather for district {props.get('name', 'unknown')}: {e}")
+            # Add district without weather data
+            district_summaries.append(DistrictWeatherSummary(
+                code=props.get("code", ""),
+                name=props.get("name", ""),
+                state_code=state_code,
+                center=Coordinates(lat=center_lat, lon=center_lon),
+                bounds={},
+                current=None,
+                alert_level="none",
+            ))
+    
+    return district_summaries
 
 @router.get("/states", response_model=List[dict])
 async def list_states():

@@ -14,7 +14,7 @@ import type {
 
 export type { GeocodeResult };
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -126,6 +126,16 @@ export async function getDashboardData(lat: number, lon: number, locationName: s
 // Cassandra Historical
 export async function getCassandraHistorical(city: string, days = 30): Promise<WeatherTrends> {
   return fetchApi<WeatherTrends>(`/cassandra/historical?city=${encodeURIComponent(city)}&days=${days}`);
+}
+
+// Cassandra Latest
+export async function getCassandraLatest(city: string): Promise<CurrentWeather> {
+  return fetchApi<CurrentWeather>(`/cassandra/latest?city=${encodeURIComponent(city)}`);
+}
+
+// Cassandra Cities
+export async function getCassandraCities(): Promise<{ cities: string[]; count: number }> {
+  return fetchApi<{ cities: string[]; count: number }>('/cassandra/cities');
 }
 
 // Health Check
