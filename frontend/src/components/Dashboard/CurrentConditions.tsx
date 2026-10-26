@@ -1,28 +1,22 @@
 import { 
-  Droplets, 
   Wind, 
   Gauge, 
-  Sun, 
   Cloud, 
   CloudRain, 
   Thermometer, 
-  AlertCircle, 
   CheckCircle, 
   Info,
-  Waves,
-  CloudSun,
   Sun as SunIcon,
   CloudSnow,
   Zap,
   Eye,
   Droplet,
-  Compass,
   ArrowUpRight,
   ArrowDownLeft,
   Sunrise,
   Sunset,
 } from 'lucide-react';
-import type { WeatherDashboardData, CurrentWeather, HourlyForecast } from '../../types';
+import type { WeatherDashboardData } from '../../types';
 import { getUVIndexDescription, getWindSpeedDescription, getWindDirectionText } from '../../services/mapUtils';
 
 interface CurrentConditionsProps {
@@ -35,30 +29,30 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
 
   if (!current) {
     return (
-      <div className="glass-card p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
-          <Thermometer className="w-8 h-8 text-neutral-500" />
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-8 text-center">
+        <div className="w-12 h-12 mx-auto mb-3 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center">
+          <Thermometer className="w-6 h-6 text-[#737373]" />
         </div>
-        <h3 className="text-neutral-400 font-medium">No current weather data</h3>
-        <p className="text-neutral-500 text-sm mt-1">Weather information is not available for this location</p>
+        <h3 className="text-[#A3A3A3] font-medium text-sm">No current weather data</h3>
+        <p className="text-[#737373] text-xs mt-1">Weather observation is not available for this location</p>
       </div>
     );
   }
 
   const weatherIcons: Record<string, React.ReactNode> = {
-    clear: <SunIcon className="w-7 h-7 text-yellow-400" />,
-    clouds: <Cloud className="w-7 h-7 text-neutral-300" />,
-    rain: <CloudRain className="w-7 h-7 text-blue-400" />,
-    snow: <CloudSnow className="w-7 h-7 text-blue-300" />,
-    thunder: <Zap className="w-7 h-7 text-yellow-400" />,
-    fog: <Cloud className="w-7 h-7 text-neutral-400" />,
-    default: <Thermometer className="w-7 h-7 text-primary-400" />,
+    clear: <SunIcon className="w-6 h-6 text-[#E7B75A]" />,
+    clouds: <Cloud className="w-6 h-6 text-[#A3A3A3]" />,
+    rain: <CloudRain className="w-6 h-6 text-[#7899B8]" />,
+    snow: <CloudSnow className="w-6 h-6 text-[#A3A3A3]" />,
+    thunder: <Zap className="w-6 h-6 text-[#E7B75A]" />,
+    fog: <Cloud className="w-6 h-6 text-[#737373]" />,
+    default: <Thermometer className="w-6 h-6 text-[#E7B75A]" />,
   };
 
   const getWeatherIcon = (code: number, isDay: boolean) => {
-    if (code === 0) return isDay ? weatherIcons.clear : <Moon className="w-7 h-7 text-yellow-300" />;
+    if (code === 0) return isDay ? weatherIcons.clear : <Moon className="w-6 h-6 text-[#E7B75A]" />;
     if (code <= 3) return weatherIcons.clouds;
-    if (code >= 45 && code <= 48) return <Cloud className="w-7 h-7 text-neutral-400" />; // Fog
+    if (code >= 45 && code <= 48) return <Cloud className="w-6 h-6 text-[#737373]" />;
     if (code >= 51 && code <= 67) return weatherIcons.rain;
     if (code >= 71 && code <= 77) return weatherIcons.snow;
     if (code >= 80 && code <= 82) return weatherIcons.rain;
@@ -67,8 +61,10 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
   };
 
   const isStoredObservation = current.source === 'cassandra';
-  const sourceLabel = isStoredObservation ? 'Stored Stream Observation' : 'Open-Meteo Weather Model';
-  const sourceIcon = isStoredObservation ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Info className="w-4 h-4 text-blue-400" />;
+  const sourceLabel = isStoredObservation ? 'Cassandra Stored Observation' : 'Open-Meteo Model';
+  const sourceIcon = isStoredObservation 
+    ? <CheckCircle className="w-3.5 h-3.5 text-[#3EA874]" /> 
+    : <Info className="w-3.5 h-3.5 text-[#E7B75A]" />;
 
   const feelsLike = current.feelsLike;
   const windSpeed = current.windSpeed;
@@ -91,52 +87,49 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
   const tempTrend = nextHours.length > 1 ? nextHours[1].temperature - nextHours[0].temperature : 0;
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Main Temperature Display */}
-      <div className="glass-card relative overflow-hidden p-6">
-        {/* Background gradient based on temperature */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-transparent" />
-        
+      <div className="bg-[#101010] border border-[#2A2A2A] border-t-2 border-t-[#E7B75A] rounded p-5 relative overflow-hidden">
         <div className="flex items-start justify-between gap-4 relative z-10">
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-              <span className="weather-temp-lg leading-none">{Math.round(current.temperature)}°</span>
+              <span className="text-4xl font-mono font-semibold text-[#F5F5F5] leading-none tracking-tight">
+                {Math.round(current.temperature)}°C
+              </span>
               <div className="flex flex-col">
-                <span className="text-body-lg font-medium text-neutral-200">{weatherDescription}</span>
-                <span className="text-capitalize text-caption">{getWeatherDescription(weatherCode)}</span>
+                <span className="text-sm font-medium text-[#F5F5F5]">{weatherDescription}</span>
+                <span className="text-xs text-[#737373]">{getWeatherDescription(weatherCode)}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-neutral-500 text-sm flex-wrap">
-              {sourceIcon}
-              <span>{sourceLabel}</span>
-              <span className="text-neutral-700">•</span>
+            <div className="flex items-center gap-2 text-[#737373] text-xs flex-wrap font-mono">
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#171717] border border-[#2A2A2A]">
+                {sourceIcon}
+                <span className="text-[#A3A3A3]">{sourceLabel}</span>
+              </span>
               {current.isDay !== undefined && current.isDay !== null && (
-                <>
-                  <span className="text-neutral-700">•</span>
-                  <span className="flex items-center gap-1">
-                    {current.isDay ? <SunIcon className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-blue-300" />}
-                    {current.isDay ? 'Daytime' : 'Nighttime'}
-                  </span>
-                </>
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#171717] border border-[#2A2A2A] text-[#A3A3A3]">
+                  {current.isDay ? <SunIcon className="w-3 h-3 text-[#E7B75A]" /> : <Moon className="w-3 h-3 text-[#A3A3A3]" />}
+                  {current.isDay ? 'Day' : 'Night'}
+                </span>
               )}
             </div>
           </div>
-          <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500/30 to-primary-400/10 flex items-center justify-center backdrop-blur-sm border border-primary-500/20">
+          <div className="flex-shrink-0 w-14 h-14 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center">
             {getWeatherIcon(weatherCode, current.isDay)}
           </div>
         </div>
 
         {/* Feels like & Trend */}
-        <div className="mt-4 pt-4 border-t border-neutral-800/50 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-2 text-neutral-500">
-            <Thermometer className="w-5 h-5" />
-            <span className="text-sm">Feels like</span>
+        <div className="mt-4 pt-3 border-t border-[#2A2A2A] flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-2 text-[#737373] text-xs">
+            <Thermometer className="w-4 h-4 text-[#A3A3A3]" />
+            <span>Feels like</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-semibold text-white tabular-nums">{Math.round(feelsLike)}°</span>
-            <div className={`flex items-center gap-1 text-sm font-medium ${tempTrend > 0.5 ? 'text-green-400' : tempTrend < -0.5 ? 'text-red-400' : 'text-neutral-500'}`}>
-              {tempTrend > 0.5 && <ArrowUpRight className="w-4 h-4" />}
-              {tempTrend < -0.5 && <ArrowDownLeft className="w-4 h-4" />}
+            <span className="text-lg font-mono font-semibold text-[#F5F5F5] tabular-nums">{Math.round(feelsLike)}°C</span>
+            <div className={`flex items-center gap-1 text-xs font-mono font-medium ${tempTrend > 0.5 ? 'text-[#3EA874]' : tempTrend < -0.5 ? 'text-[#D9534F]' : 'text-[#737373]'}`}>
+              {tempTrend > 0.5 && <ArrowUpRight className="w-3.5 h-3.5" />}
+              {tempTrend < -0.5 && <ArrowDownLeft className="w-3.5 h-3.5" />}
               <span>{tempTrend > 0 ? '+' : ''}{tempTrend.toFixed(1)}°/hr</span>
             </div>
           </div>
@@ -144,27 +137,27 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
       </div>
 
       {/* Weather Details Grid - Primary Metrics */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <WeatherDetailCard
-          icon={<Droplets className="w-5 h-5 text-blue-400" />}
+          icon={<Droplet className="w-4 h-4 text-[#4E9F8E]" />}
           label="Humidity"
           value={`${humidity}%`}
           description={getHumidityDescription(humidity)}
         />
         <WeatherDetailCard
-          icon={<Wind className="w-5 h-5 text-green-400" />}
+          icon={<Wind className="w-4 h-4 text-[#E7B75A]" />}
           label="Wind"
           value={`${windSpeed} km/h`}
           description={`${windDirectionText} (${windDirection}°) • ${windInfo.label}`}
         />
         <WeatherDetailCard
-          icon={<Gauge className="w-5 h-5 text-yellow-400" />}
+          icon={<Gauge className="w-4 h-4 text-[#A3A3A3]" />}
           label="Pressure"
           value={`${pressure} hPa`}
           description={getPressureDescription(pressure)}
         />
         <WeatherDetailCard
-          icon={<CloudRain className="w-5 h-5 text-cyan-400" />}
+          icon={<CloudRain className="w-4 h-4 text-[#7899B8]" />}
           label="Precipitation"
           value={`${precipitation} mm`}
           description={getPrecipitationDescription(precipitation)}
@@ -172,86 +165,85 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
       </div>
 
       {/* Secondary Metrics Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <WeatherDetailCard
-          icon={<Eye className="w-5 h-5 text-purple-400" />}
+          icon={<Eye className="w-4 h-4 text-[#A3A3A3]" />}
           label="Visibility"
           value={visibility == null ? 'N/A' : `${visibility.toFixed(1)} km`}
           description={visibility == null ? 'Data unavailable' : getVisibilityDescription(visibility)}
         />
         <WeatherDetailCard
-          icon={<Cloud className="w-5 h-5 text-indigo-400" />}
+          icon={<Cloud className="w-4 h-4 text-[#A3A3A3]" />}
           label="Cloud Cover"
           value={`${cloudCover}%`}
           description={getCloudCoverDescription(cloudCover)}
         />
         <WeatherDetailCard
-          icon={<SunIcon className="w-5 h-5 text-orange-400" />}
+          icon={<SunIcon className="w-4 h-4 text-[#E7B75A]" />}
           label="UV Index"
           value={uvIndex == null ? 'N/A' : `${uvIndex}`}
           description={uvInfo ? `${uvInfo.label} • ${uvInfo.protection}` : 'Data unavailable'}
-          valueColor={uvInfo?.color}
         />
         <WeatherDetailCard
-          icon={<Droplet className="w-5 h-5 text-emerald-400" />}
+          icon={<Droplet className="w-4 h-4 text-[#4E9F8E]" />}
           label="Dew Point"
-          value={`${calculateDewPoint(current.temperature, humidity).toFixed(1)}°`}
+          value={`${calculateDewPoint(current.temperature, humidity).toFixed(1)}°C`}
           description={getDewPointDescription(calculateDewPoint(current.temperature, humidity))}
         />
       </div>
 
       {/* Wind Details Card */}
-      <div className="glass-card p-5">
-        <h4 className="text-neutral-200 font-medium mb-4 flex items-center gap-2">
-          <Wind className="w-4 h-4 text-green-400" />
-          Wind Details
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-4">
+        <h4 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Wind className="w-3.5 h-3.5 text-[#E7B75A]" />
+          Wind Vector & Velocity
         </h4>
-        <div className="grid grid-cols-3 gap-3 text-sm">
-          <div className="text-center p-4 bg-neutral-800/50 rounded-xl">
-            <p className="text-neutral-500 text-xs mb-1 uppercase tracking-wider">Speed</p>
-            <p className="text-white font-semibold text-xl tabular-nums">{windSpeed} km/h</p>
-            <p className="text-neutral-500 text-xs">{windInfo.label} (Beaufort {windInfo.beaufort})</p>
+        <div className="grid grid-cols-3 gap-2.5 text-xs">
+          <div className="p-3 bg-[#171717] border border-[#222222] rounded">
+            <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider mb-1">Speed</p>
+            <p className="text-[#F5F5F5] font-mono font-semibold text-base tabular-nums">{windSpeed} km/h</p>
+            <p className="text-[#737373] text-[10px] mt-0.5">{windInfo.label}</p>
           </div>
-          <div className="text-center p-4 bg-neutral-800/50 rounded-xl relative">
-            <p className="text-neutral-500 text-xs mb-1 uppercase tracking-wider">Direction</p>
-            <p className="text-white font-semibold text-xl tabular-nums">{windDirectionText}</p>
-            <p className="text-neutral-500 text-xs">{windDirection}° from North</p>
-            <div className="absolute top-2 right-2 w-8 h-8 rounded-full border-2 border-neutral-700 flex items-center justify-center">
-              <div className="w-1.5 h-6 bg-green-400 rounded-t-full transform" style={{ transform: `rotate(${windDirection}deg)` }} />
+          <div className="p-3 bg-[#171717] border border-[#222222] rounded relative">
+            <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider mb-1">Direction</p>
+            <p className="text-[#F5F5F5] font-mono font-semibold text-base tabular-nums">{windDirectionText}</p>
+            <p className="text-[#737373] text-[10px] mt-0.5">{windDirection}° N</p>
+            <div className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full border border-[#2A2A2A] flex items-center justify-center">
+              <div className="w-1 h-3.5 bg-[#E7B75A] rounded-t-full transform" style={{ transform: `rotate(${windDirection}deg)` }} />
             </div>
           </div>
-          <div className="text-center p-4 bg-neutral-800/50 rounded-xl">
-            <p className="text-neutral-500 text-xs mb-1 uppercase tracking-wider">Gust</p>
-            <p className="text-white font-semibold text-xl tabular-nums">{current.windGust == null ? 'N/A' : `${current.windGust} km/h`}</p>
-            <p className="text-neutral-500 text-xs">{current.windGust == null ? 'Not reported' : 'Peak gust speed'}</p>
+          <div className="p-3 bg-[#171717] border border-[#222222] rounded">
+            <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider mb-1">Peak Gust</p>
+            <p className="text-[#F5F5F5] font-mono font-semibold text-base tabular-nums">{current.windGust == null ? 'N/A' : `${current.windGust} km/h`}</p>
+            <p className="text-[#737373] text-[10px] mt-0.5">{current.windGust == null ? 'Not reported' : 'Observed gust'}</p>
           </div>
         </div>
       </div>
 
       {/* Sun Times Card */}
       {(current as any).sunrise && (current as any).sunset && (
-        <div className="glass-card p-5">
-          <h4 className="text-neutral-200 font-medium mb-4 flex items-center gap-2">
-            <SunIcon className="w-4 h-4 text-yellow-400" />
-            Sun & Moon
+        <div className="bg-[#101010] border border-[#2A2A2A] rounded p-4">
+          <h4 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2">
+            <SunIcon className="w-3.5 h-3.5 text-[#E7B75A]" />
+            Solar Ephemeris
           </h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-3 p-4 bg-neutral-800/50 rounded-xl">
-              <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
-                <Sunrise className="w-5 h-5 text-yellow-400" />
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="flex items-center gap-3 p-3 bg-[#171717] border border-[#222222] rounded">
+              <div className="w-8 h-8 rounded bg-[#202020] border border-[#2A2A2A] flex items-center justify-center">
+                <Sunrise className="w-4 h-4 text-[#E7B75A]" />
               </div>
               <div>
-                <p className="text-neutral-500 text-xs uppercase tracking-wider">Sunrise</p>
-                <p className="text-white font-medium">{formatTime((current as any).sunrise)}</p>
+                <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider">Sunrise</p>
+                <p className="text-[#F5F5F5] font-mono text-xs font-medium">{formatTime((current as any).sunrise)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-4 bg-neutral-800/50 rounded-xl">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <Sunset className="w-5 h-5 text-blue-300" />
+            <div className="flex items-center gap-3 p-3 bg-[#171717] border border-[#222222] rounded">
+              <div className="w-8 h-8 rounded bg-[#202020] border border-[#2A2A2A] flex items-center justify-center">
+                <Sunset className="w-4 h-4 text-[#E07A5F]" />
               </div>
               <div>
-                <p className="text-neutral-500 text-xs uppercase tracking-wider">Sunset</p>
-                <p className="text-white font-medium">{formatTime((current as any).sunset)}</p>
+                <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider">Sunset</p>
+                <p className="text-[#F5F5F5] font-mono text-xs font-medium">{formatTime((current as any).sunset)}</p>
               </div>
             </div>
           </div>
@@ -260,27 +252,27 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
 
       {/* Hourly Precipitation Forecast */}
       {hourly.length > 0 && (
-        <div className="glass-card p-5">
-          <h4 className="text-neutral-200 font-medium mb-4 flex items-center gap-2">
-            <CloudRain className="w-4 h-4 text-cyan-400" />
-            Next 12 Hours Precipitation
+        <div className="bg-[#101010] border border-[#2A2A2A] rounded p-4">
+          <h4 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2">
+            <CloudRain className="w-3.5 h-3.5 text-[#7899B8]" />
+            12-Hour Precipitation Forecast
           </h4>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
             {hourly.slice(0, 12).map((hour, index) => (
-              <div key={index} className="flex-shrink-0 flex flex-col items-center gap-1.5 min-w-[52px]">
-                <span className="text-xs text-neutral-500 font-mono tabular-nums">{formatHour(hour.time.toString())}</span>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-neutral-800/50 border border-neutral-700/50 transition-colors hover:border-primary-500/30">
+              <div key={index} className="flex-shrink-0 flex flex-col items-center gap-1 min-w-[56px] p-2 bg-[#171717] border border-[#222222] rounded">
+                <span className="text-[10px] text-[#737373] font-mono tabular-nums">{formatHour(hour.time.toString())}</span>
+                <div className="w-7 h-7 rounded flex items-center justify-center text-[#7899B8]">
                   {hour.precipitation > 0 ? (
-                    <CloudRain className="w-5 h-5 text-cyan-400" />
+                    <CloudRain className="w-4 h-4 text-[#7899B8]" />
                   ) : (
-                    <span className="text-xs text-neutral-500">—</span>
+                    <span className="text-xs text-[#555555]">—</span>
                   )}
                 </div>
-                <span className="text-xs text-white font-medium tabular-nums">
-                  {hour.precipitation > 0 ? `${hour.precipitation.toFixed(1)}mm` : '—'}
+                <span className="text-[11px] text-[#F5F5F5] font-mono font-medium tabular-nums">
+                  {hour.precipitation > 0 ? `${hour.precipitation.toFixed(1)}mm` : '0 mm'}
                 </span>
                 {hour.precipitationProbability > 0 && (
-                  <span className="text-xs text-blue-400 font-medium">{hour.precipitationProbability}%</span>
+                  <span className="text-[10px] text-[#7899B8] font-mono">{hour.precipitationProbability}%</span>
                 )}
               </div>
             ))}
@@ -288,14 +280,14 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
         </div>
       )}
 
-      {/* Data Source & Quality */}
-      <div className="glass-card p-4 border-t border-neutral-800/50">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-2 text-neutral-500">
-            <Info className="w-4 h-4" />
-            <span>Data source: {current.source === 'cassandra' ? 'Stored Stream Observation' : 'Open-Meteo Model'}</span>
+      {/* Data Source & Location */}
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-3">
+        <div className="flex items-center justify-between text-xs font-mono">
+          <div className="flex items-center gap-2 text-[#737373]">
+            <Info className="w-3.5 h-3.5 text-[#E7B75A]" />
+            <span>Source: {current.source === 'cassandra' ? 'Cassandra Ingest' : 'Open-Meteo'}</span>
           </div>
-          <div className="flex items-center gap-3 text-neutral-500 font-mono tabular-nums text-xs">
+          <div className="flex items-center gap-3 text-[#737373] tabular-nums text-[11px]">
             <span>Lat: {current.latitude?.toFixed(4) ?? 'N/A'}</span>
             <span>Lon: {current.longitude?.toFixed(4) ?? 'N/A'}</span>
           </div>
@@ -314,15 +306,15 @@ function WeatherDetailCard({ icon, label, value, description, valueColor }: {
   valueColor?: string;
 }) {
   return (
-    <div className="glass-card-hover p-4 group">
-      <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2">
+    <div className="bg-[#101010] border border-[#2A2A2A] rounded p-3 hover:border-[#383838] transition-colors">
+      <div className="flex items-center gap-2 text-[#737373] text-xs mb-1.5">
         {icon}
-        <span className="font-medium text-neutral-300 group-hover:text-white transition-colors">{label}</span>
+        <span className="font-mono text-[#A3A3A3] text-[11px] uppercase tracking-wider">{label}</span>
       </div>
-      <p className="weather-detail-value" style={{ color: valueColor }}>
+      <p className="text-lg font-mono font-semibold text-[#F5F5F5] tabular-nums" style={{ color: valueColor }}>
         {value}
       </p>
-      <p className="text-capitalize mt-1 line-clamp-2">{description}</p>
+      <p className="text-[11px] text-[#737373] mt-1 line-clamp-1">{description}</p>
     </div>
   );
 }
@@ -339,32 +331,32 @@ function getHumidityDescription(humidity: number): string {
 function getPressureDescription(pressure: number): string {
   if (pressure < 1000) return 'Low pressure - stormy';
   if (pressure < 1010) return 'Below normal';
-  if (pressure < 1020) return 'Normal';
-  if (pressure < 1030) return 'High pressure - fair weather';
+  if (pressure < 1020) return 'Normal barometric';
+  if (pressure < 1030) return 'High pressure - fair';
   return 'Very high pressure';
 }
 
 function getPrecipitationDescription(precip: number): string {
-  if (precip === 0) return 'No precipitation';
-  if (precip < 2.5) return 'Light rain/drizzle';
+  if (precip === 0) return 'No observed rain';
+  if (precip < 2.5) return 'Light drizzle';
   if (precip < 10) return 'Moderate rain';
   if (precip < 50) return 'Heavy rain';
-  return 'Very heavy rain';
+  return 'Torrential rain';
 }
 
 function getVisibilityDescription(vis: number): string {
-  if (vis < 1) return 'Very poor - fog';
-  if (vis < 5) return 'Poor';
-  if (vis < 10) return 'Moderate';
-  return 'Good';
+  if (vis < 1) return 'Severe fog';
+  if (vis < 5) return 'Poor visibility';
+  if (vis < 10) return 'Moderate visibility';
+  return 'Clear line of sight';
 }
 
 function getCloudCoverDescription(cover: number): string {
   if (cover === 0) return 'Clear sky';
-  if (cover < 25) return 'Few clouds';
+  if (cover < 25) return 'Scattered clouds';
   if (cover < 50) return 'Partly cloudy';
   if (cover < 75) return 'Mostly cloudy';
-  return 'Overcast';
+  return 'Overcast conditions';
 }
 
 function getDewPointDescription(dewPoint: number): string {
@@ -381,19 +373,6 @@ function calculateDewPoint(temp: number, humidity: number): number {
   const b = 237.7;
   const alpha = (a * temp) / (b + temp) + Math.log(humidity / 100);
   return (b * alpha) / (a - alpha);
-}
-
-function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return date.toLocaleDateString();
 }
 
 function formatTime(isoString: string): string {

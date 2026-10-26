@@ -19,78 +19,76 @@ export function DataFreshness({ data }: DataFreshnessProps) {
   let freshnessIcon: React.ReactNode;
 
   if (diffMins < 5) {
-    freshnessLabel = 'Just now';
-    freshnessColor = 'text-green-400';
-    freshnessIcon = <Wifi className="w-4 h-4" />;
+    freshnessLabel = 'Nominal (live)';
+    freshnessColor = 'text-[#3EA874]';
+    freshnessIcon = <Wifi className="w-3.5 h-3.5 text-[#3EA874]" />;
   } else if (diffMins < 15) {
-    freshnessLabel = `${diffMins} minutes ago`;
-    freshnessColor = 'text-green-400';
-    freshnessIcon = <Wifi className="w-4 h-4" />;
+    freshnessLabel = `${diffMins}m ago`;
+    freshnessColor = 'text-[#3EA874]';
+    freshnessIcon = <Wifi className="w-3.5 h-3.5 text-[#3EA874]" />;
   } else if (diffMins < 60) {
-    freshnessLabel = `${diffMins} minutes ago`;
-    freshnessColor = 'text-yellow-400';
-    freshnessIcon = <Wifi className="w-4 h-4" />;
+    freshnessLabel = `${diffMins}m ago`;
+    freshnessColor = 'text-[#E7B75A]';
+    freshnessIcon = <Wifi className="w-3.5 h-3.5 text-[#E7B75A]" />;
   } else if (diffHours < 6) {
-    freshnessLabel = `${diffHours} hours ago`;
-    freshnessColor = 'text-yellow-400';
-    freshnessIcon = <Wifi className="w-4 h-4" />;
+    freshnessLabel = `${diffHours}h ago`;
+    freshnessColor = 'text-[#E7B75A]';
+    freshnessIcon = <Wifi className="w-3.5 h-3.5 text-[#E7B75A]" />;
   } else if (diffHours < 24) {
-    freshnessLabel = `${diffHours} hours ago`;
-    freshnessColor = 'text-orange-400';
-    freshnessIcon = <WifiOff className="w-4 h-4" />;
+    freshnessLabel = `${diffHours}h ago (stale)`;
+    freshnessColor = 'text-[#E07A5F]';
+    freshnessIcon = <WifiOff className="w-3.5 h-3.5 text-[#E07A5F]" />;
   } else {
-    freshnessLabel = `${Math.floor(diffHours / 24)} days ago`;
-    freshnessColor = 'text-red-400';
-    freshnessIcon = <WifiOff className="w-4 h-4" />;
+    freshnessLabel = `${Math.floor(diffHours / 24)}d ago (archive)`;
+    freshnessColor = 'text-[#D9534F]';
+    freshnessIcon = <WifiOff className="w-3.5 h-3.5 text-[#D9534F]" />;
   }
 
   const sourceLabels: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
     'open-meteo': {
-      label: 'Open-Meteo',
-      icon: <Cloud className="w-4 h-4" />,
-      description: 'Weather model forecast',
+      label: 'Open-Meteo Model',
+      icon: <Cloud className="w-3.5 h-3.5 text-[#E7B75A]" />,
+      description: 'Numerical Weather Prediction (NWP) model',
     },
     'cassandra': {
-      label: 'Cassandra',
-      icon: <Database className="w-4 h-4" />,
-      description: 'Historical observations',
+      label: 'Cassandra Storage',
+      icon: <Database className="w-3.5 h-3.5 text-[#3EA874]" />,
+      description: 'Real-time telemetry ingested via Spark / Kafka pipeline',
     },
     'mixed': {
-      label: 'Mixed Sources',
-      icon: <Shield className="w-4 h-4" />,
-      description: 'Combined model & observed data',
+      label: 'Hybrid Pipeline',
+      icon: <Shield className="w-3.5 h-3.5 text-[#7899B8]" />,
+      description: 'Ensemble stream of observed station records and model forecast',
     },
   };
 
   const sourceInfo = sourceLabels[data.dataSource] || sourceLabels['open-meteo'];
 
   return (
-    <div className="glass-card p-4 border-t border-neutral-800/50">
+    <div className="bg-[#101010] border border-[#2A2A2A] rounded p-3.5 text-xs font-mono">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${freshnessColor}/20`}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center">
             {freshnessIcon}
           </div>
           <div>
-            <p className="text-white font-medium text-sm">Data Freshness</p>
-            <p className={`text-sm ${freshnessColor}`}>Last updated: {freshnessLabel}</p>
+            <p className="text-[#F5F5F5] font-medium text-xs">Pipeline Ingest Status</p>
+            <p className={`text-[11px] ${freshnessColor}`}>Updated: {freshnessLabel}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-right">
-          <div className="flex items-center gap-1.5 text-neutral-400 text-xs">
-            {sourceInfo.icon}
-            <span className="font-medium text-white">{sourceInfo.label}</span>
-          </div>
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#171717] border border-[#2A2A2A] text-[11px] text-[#A3A3A3]">
+          {sourceInfo.icon}
+          <span>{sourceInfo.label}</span>
         </div>
       </div>
-      <p className="text-neutral-500 text-xs mt-3 ml-12">{sourceInfo.description}</p>
+      <p className="text-[#737373] text-[10px] mt-2 pl-9">{sourceInfo.description}</p>
 
-      {/* Cache status */}
-      <div className="mt-3 pt-3 border-t border-neutral-800/30 flex items-center justify-between text-xs text-neutral-500">
-        <span>Next auto-refresh: ~{getNextRefreshMinutes(data.dataSource)} min</span>
+      {/* Cache & refresh status */}
+      <div className="mt-2.5 pt-2 border-t border-[#222222] flex items-center justify-between text-[10px] text-[#737373]">
+        <span>Auto-sync interval: ~{getNextRefreshMinutes(data.dataSource)} min</span>
         <span className="flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          Cached for {getCacheDuration(data.dataSource)} min
+          <Clock className="w-3 h-3 text-[#E7B75A]" />
+          TTL: {getCacheDuration(data.dataSource)} min
         </span>
       </div>
     </div>

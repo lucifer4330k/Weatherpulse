@@ -463,12 +463,12 @@ export function MapContainer({
         
         popup.setLngLat([coords[0], coords[1]])
           .setHTML(`
-            <div style="background:#0D1828; color:#F8FAFC; padding:8px 12px; border-radius:8px; border:1px solid #1E3A5F; font-family:Inter,sans-serif; box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-              <div style="font-weight:600; font-size:12px; color:#38BDF8; margin-bottom:2px;">${props?.name || 'City'}</div>
-              <div style="font-size:11px; color:#94A3B8;">${props?.state || ''}</div>
-              <div style="display:flex; align-items:baseline; gap:6px; margin-top:4px;">
-                <span style="font-size:16px; font-weight:700; color:#F1F5F9;">${tempText}</span>
-                <span style="font-size:10px; color:#64748B;">${humText}</span>
+            <div style="background:#171717; color:#F5F5F5; padding:8px 12px; border-radius:4px; border:1px solid #2A2A2A; font-family:Inter,sans-serif; box-shadow:0 8px 24px rgba(0,0,0,0.7);">
+              <div style="font-weight:600; font-size:12px; color:#E7B75A; margin-bottom:2px;">${props?.name || 'City'}</div>
+              <div style="font-size:11px; color:#737373;">${props?.state || ''}</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:4px; font-family:'JetBrains Mono',monospace;">
+                <span style="font-size:15px; font-weight:700; color:#F5F5F5;">${tempText}</span>
+                <span style="font-size:10px; color:#A3A3A3;">${humText}</span>
               </div>
             </div>
           `)
@@ -483,9 +483,9 @@ export function MapContainer({
         
         popup.setLngLat(e.lngLat)
           .setHTML(`
-            <div style="background:#0D1828; color:#F8FAFC; padding:6px 10px; border-radius:6px; border:1px solid #1E3A5F; font-family:Inter,sans-serif; font-size:11px;">
-              <span style="font-weight:600; color:#38BDF8;">${props?.name || props?.code || 'State'}</span>
-              ${tempText ? `<span style="margin-left:6px; font-weight:700; color:#F59E0B;">${tempText}</span>` : ''}
+            <div style="background:#171717; color:#F5F5F5; padding:6px 10px; border-radius:4px; border:1px solid #2A2A2A; font-family:Inter,sans-serif; font-size:11px; box-shadow:0 4px 12px rgba(0,0,0,0.6);">
+              <span style="font-weight:600; color:#E7B75A;">${props?.name || props?.code || 'State'}</span>
+              ${tempText ? `<span style="margin-left:6px; font-weight:700; color:#F5F5F5; font-family:'JetBrains Mono',monospace;">${tempText}</span>` : ''}
             </div>
           `)
           .addTo(map);

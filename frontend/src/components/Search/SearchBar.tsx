@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, MapPin, Loader2, Compass, Building2 } from 'lucide-react';
 import { useSearchLocations } from '../../hooks/useGeocode';
 import { useAppStore } from '../../store/useAppStore';
-import { INDIA_CITIES, type City } from '../../data/india-cities';
+import { INDIA_CITIES } from '../../data/india-cities';
 import type { GeocodeResult } from '../../types';
 
 interface SearchOption {
@@ -160,7 +160,7 @@ export function SearchBar() {
     <div className="relative w-full">
       {/* Search Input Box */}
       <div className="relative flex items-center">
-        <Search className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
+        <Search className="absolute left-3 w-4 h-4 text-[#737373] pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -169,14 +169,14 @@ export function SearchBar() {
           onKeyDown={handleKeyDown}
           onFocus={() => setShowResults(true)}
           placeholder="Search Indian city, capital, or station..."
-          className="w-full h-10 pl-9 pr-9 rounded-xl bg-[#07111F]/90 border border-[#1E3A5F] text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 transition-all font-sans"
+          className="w-full h-9 pl-9 pr-9 rounded bg-[#101010] border border-[#2A2A2A] text-[#F5F5F5] placeholder-[#737373] text-xs focus:outline-none focus:border-[#E7B75A]/60 focus:ring-1 focus:ring-[#E7B75A]/40 transition-colors font-sans"
           autoComplete="off"
           spellCheck="false"
         />
         {inputValue && (
           <button
             onClick={clearInput}
-            className="absolute right-2.5 p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="absolute right-2.5 p-1 rounded text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717] transition-colors"
             title="Clear search"
           >
             <X className="w-3.5 h-3.5" />
@@ -188,15 +188,15 @@ export function SearchBar() {
       {showResults && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-[#0D1828] border border-[#1E3A5F] shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden z-50 animate-fade-in"
+          className="absolute top-full left-0 right-0 mt-1.5 rounded bg-[#101010] border border-[#2A2A2A] shadow-2xl shadow-black/90 overflow-hidden z-50 animate-fade-in"
           style={{ maxHeight: '380px' }}
         >
           {inputValue.trim().length < 2 ? (
             /* Quick Picks when input is empty or 1 letter */
             <div className="p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                <Compass className="w-3 h-3 text-cyan-400" />
-                Popular Meteorological Centers
+              <p className="text-[10px] font-mono uppercase tracking-wider text-[#737373] mb-2 flex items-center gap-1.5">
+                <Compass className="w-3 h-3 text-[#E7B75A]" />
+                Major Meteorological Stations
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {['Mumbai', 'Delhi', 'Bengaluru', 'Kolkata', 'Chennai', 'Hyderabad', 'Ahmedabad', 'Pune', 'Jaipur', 'Shimla'].map((city) => (
@@ -218,7 +218,7 @@ export function SearchBar() {
                         });
                       }
                     }}
-                    className="px-2.5 py-1 rounded-md bg-[#111F32] hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-[#1E2E48] hover:border-cyan-500/30 text-xs transition-all font-medium"
+                    className="px-2 py-1 rounded bg-[#171717] hover:bg-[#202020] text-[#A3A3A3] hover:text-[#F5F5F5] border border-[#2A2A2A] hover:border-[#E7B75A]/40 text-xs transition-colors font-mono"
                   >
                     {city}
                   </button>
@@ -227,7 +227,7 @@ export function SearchBar() {
             </div>
           ) : allResults.length > 0 ? (
             /* Match List */
-            <ul className="divide-y divide-[#1E2E48]/60 overflow-y-auto max-h-[320px] scrollbar-thin">
+            <ul className="divide-y divide-[#2A2A2A]/50 overflow-y-auto max-h-[320px] scrollbar-thin">
               {allResults.map((option, idx) => (
                 <li
                   key={option.id}
@@ -236,43 +236,43 @@ export function SearchBar() {
                     e.preventDefault();
                     handleSelect(option);
                   }}
-                  className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer transition-colors ${
+                  className={`px-3 py-2 flex items-center justify-between cursor-pointer transition-colors ${
                     idx === selectedIndex 
-                      ? 'bg-cyan-500/15 text-white' 
-                      : 'text-slate-300 hover:bg-[#111F32]'
+                      ? 'bg-[#1E1E1E] text-white border-l-2 border-l-[#E7B75A]' 
+                      : 'text-[#A3A3A3] hover:bg-[#171717]'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${
                       option.isCapital 
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
-                        : 'bg-[#111F32] text-cyan-400 border border-[#1E3A5F]'
+                        ? 'bg-[#E7B75A]/15 text-[#E7B75A] border border-[#E7B75A]/30' 
+                        : 'bg-[#171717] text-[#A3A3A3] border border-[#2A2A2A]'
                     }`}>
-                      {option.isCapital ? <Building2 className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
+                      {option.isCapital ? <Building2 className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-xs text-white truncate">{option.name}</span>
+                        <span className="font-medium text-xs text-[#F5F5F5] truncate">{option.name}</span>
                         {option.isCapital && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-medium border border-amber-500/30">
+                          <span className="px-1.5 py-0.2 rounded bg-[#E7B75A]/15 text-[#E7B75A] text-[9px] font-mono font-medium border border-[#E7B75A]/30">
                             Capital
                           </span>
                         )}
                         {option.tier === 1 && !option.isCapital && (
-                          <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-medium border border-cyan-500/30">
+                          <span className="px-1.5 py-0.2 rounded bg-[#202020] text-[#A3A3A3] text-[9px] font-mono border border-[#333333]">
                             Metro
                           </span>
                         )}
                       </div>
-                      <p className="text-slate-400 text-[11px] truncate">{option.state}</p>
+                      <p className="text-[#737373] text-[11px] truncate">{option.state}</p>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 pl-2">
-                    <span className="font-mono text-[10px] text-slate-500 tabular-nums">
+                    <span className="font-mono text-[10px] text-[#737373] tabular-nums">
                       {option.lat.toFixed(2)}°, {option.lon.toFixed(2)}°
                     </span>
                     {option.population && option.population > 0 && (
-                      <p className="text-[10px] text-slate-500 font-mono">
+                      <p className="text-[10px] text-[#737373] font-mono">
                         {(option.population / 1000000).toFixed(1)}M
                       </p>
                     )}
@@ -282,14 +282,14 @@ export function SearchBar() {
             </ul>
           ) : isRemoteLoading ? (
             /* Loading State */
-            <div className="p-4 flex items-center justify-center gap-2 text-slate-400 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+            <div className="p-4 flex items-center justify-center gap-2 text-[#737373] text-xs font-mono">
+              <Loader2 className="w-4 h-4 animate-spin text-[#E7B75A]" />
               Searching meteorological stations...
             </div>
           ) : (
             /* No Results */
-            <div className="p-4 text-center text-slate-400 text-xs">
-              No Indian locations found matching <span className="text-white font-medium">"{inputValue}"</span>
+            <div className="p-4 text-center text-[#737373] text-xs">
+              No Indian locations found matching <span className="text-[#F5F5F5] font-medium">"{inputValue}"</span>
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { AlertTriangle, AlertCircle, Info, CheckCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, CheckCircle, ChevronDown, ChevronUp, Thermometer, CloudRain, Wind, Gauge, Sun } from 'lucide-react';
 import { useState } from 'react';
 import type { WeatherDashboardData, WeatherAlert } from '../../types';
 
@@ -6,19 +6,39 @@ interface AlertsProps {
   data: WeatherDashboardData | null;
 }
 
-const SEVERITY_CONFIG: Record<WeatherAlert['severity'], { color: string; bg: string; icon: React.ReactNode; label: string }> = {
-  info: { color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20', icon: <Info className="w-5 h-5" />, label: 'Info' },
-  warning: { color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20', icon: <AlertTriangle className="w-5 h-5" />, label: 'Warning' },
-  severe: { color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20', icon: <AlertCircle className="w-5 h-5" />, label: 'Severe' },
-  extreme: { color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20', icon: <AlertTriangle className="w-5 h-5" />, label: 'Extreme' },
+const SEVERITY_CONFIG: Record<WeatherAlert['severity'], { color: string; borderAccent: string; icon: React.ReactNode; label: string }> = {
+  info: { 
+    color: 'text-[#7899B8]', 
+    borderAccent: 'border-l-[#7899B8]', 
+    icon: <Info className="w-4 h-4 text-[#7899B8]" />, 
+    label: 'Advisory' 
+  },
+  warning: { 
+    color: 'text-[#E7B75A]', 
+    borderAccent: 'border-l-[#E7B75A]', 
+    icon: <AlertTriangle className="w-4 h-4 text-[#E7B75A]" />, 
+    label: 'Warning' 
+  },
+  severe: { 
+    color: 'text-[#E07A5F]', 
+    borderAccent: 'border-l-[#E07A5F]', 
+    icon: <AlertCircle className="w-4 h-4 text-[#E07A5F]" />, 
+    label: 'Severe' 
+  },
+  extreme: { 
+    color: 'text-[#D9534F]', 
+    borderAccent: 'border-l-[#D9534F]', 
+    icon: <AlertTriangle className="w-4 h-4 text-[#D9534F]" />, 
+    label: 'Extreme' 
+  },
 };
 
 const TYPE_ICONS: Record<WeatherAlert['type'], React.ReactNode> = {
-  temperature: <span className="text-red-400">🌡️</span>,
-  precipitation: <span className="text-blue-400">🌧️</span>,
-  wind: <span className="text-green-400">💨</span>,
-  pressure: <span className="text-yellow-400">📊</span>,
-  uv: <span className="text-purple-400">☀️</span>,
+  temperature: <Thermometer className="w-3.5 h-3.5 text-[#E07A5F]" />,
+  precipitation: <CloudRain className="w-3.5 h-3.5 text-[#7899B8]" />,
+  wind: <Wind className="w-3.5 h-3.5 text-[#E7B75A]" />,
+  pressure: <Gauge className="w-3.5 h-3.5 text-[#A3A3A3]" />,
+  uv: <Sun className="w-3.5 h-3.5 text-[#E7B75A]" />,
 };
 
 export function Alerts({ data }: AlertsProps) {
@@ -27,12 +47,12 @@ export function Alerts({ data }: AlertsProps) {
 
   if (alerts.length === 0) {
     return (
-      <div className="glass-card p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
-          <CheckCircle className="w-8 h-8 text-green-400" />
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-8 text-center">
+        <div className="w-12 h-12 mx-auto mb-3 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center">
+          <CheckCircle className="w-6 h-6 text-[#3EA874]" />
         </div>
-        <h3 className="text-neutral-300 font-medium">No Active Alerts</h3>
-        <p className="text-neutral-500 text-sm mt-1">No weather alerts for this location at this time</p>
+        <h3 className="text-[#F5F5F5] font-mono text-sm font-medium">No Active Meteorological Alerts</h3>
+        <p className="text-[#737373] text-xs mt-1">All monitored parameters are within nominal thresholds</p>
       </div>
     );
   }
@@ -42,13 +62,13 @@ export function Alerts({ data }: AlertsProps) {
   const sortedAlerts = [...alerts].sort((a, b) => severityOrder[b.severity] - severityOrder[a.severity]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-neutral-200 font-medium flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-yellow-400" />
-          Weather Alerts ({alerts.length})
+        <h4 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider flex items-center gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-[#E7B75A]" />
+          Active Bulletins ({alerts.length})
         </h4>
-        <span className="text-neutral-500 text-xs">
+        <span className="text-[#737373] text-[11px] font-mono">
           {alerts.filter(a => a.severity === 'extreme').length} Extreme
           {' • '}
           {alerts.filter(a => a.severity === 'severe').length} Severe
@@ -57,7 +77,7 @@ export function Alerts({ data }: AlertsProps) {
         </span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {sortedAlerts.map((alert) => (
           <AlertCard
             key={alert.id}
@@ -83,64 +103,60 @@ function AlertCard({ alert, isExpanded, onToggle }: { alert: WeatherAlert; isExp
   const config = SEVERITY_CONFIG[alert.severity];
 
   return (
-    <div className={`glass-card border ${config.bg}`}>
+    <div className={`bg-[#101010] border border-[#2A2A2A] border-l-2 ${config.borderAccent} rounded overflow-hidden`}>
       <button
         onClick={onToggle}
-        className="w-full p-4 flex items-start gap-3 text-left"
+        className="w-full p-3.5 flex items-start gap-3 text-left hover:bg-[#141414] transition-colors"
         aria-expanded={isExpanded}
       >
-        <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${config.color}`}>
+        <div className="flex-shrink-0 w-8 h-8 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center">
           {config.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-white">{TYPE_ICONS[alert.type]}{alert.title}</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${config.color} bg-opacity-20`}>
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="flex items-center gap-1.5 font-medium text-xs text-[#F5F5F5]">
+              {TYPE_ICONS[alert.type]}
+              {alert.title}
+            </span>
+            <span className={`px-1.5 py-0.2 rounded font-mono text-[9px] uppercase tracking-wider font-semibold ${config.color} bg-[#171717] border border-[#2A2A2A]`}>
               {config.label}
             </span>
-            <span className="text-neutral-500 text-xs ml-auto">
+            <span className="text-[#737373] text-[10px] font-mono ml-auto">
               {formatTimeRange(alert.startTime, alert.endTime)}
             </span>
           </div>
-          <p className="text-neutral-300 text-sm">{alert.description}</p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-current" />
-              Threshold: {alert.threshold}{alert.unit}
-            </span>
-            <span className="flex items-center gap-1">
-              Current: <span className="font-medium text-white">{alert.currentValue}{alert.unit}</span>
-            </span>
+          <p className="text-[#A3A3A3] text-xs leading-relaxed">{alert.description}</p>
+          <div className="flex items-center gap-3 mt-2 text-[10px] font-mono text-[#737373] flex-wrap">
+            <span>Threshold: {alert.threshold}{alert.unit}</span>
+            <span>Current: <strong className="text-[#F5F5F5]">{alert.currentValue}{alert.unit}</strong></span>
             {alert.regions.length > 0 && (
-              <span className="flex items-center gap-1">
-                Regions: <span className="font-medium text-white">{alert.regions.join(', ')}</span>
-              </span>
+              <span>Regions: {alert.regions.join(', ')}</span>
             )}
           </div>
         </div>
-        <div className="flex-shrink-0 text-neutral-500">
-          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        <div className="flex-shrink-0 text-[#737373] mt-1">
+          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-neutral-800/50 px-4 pb-4 bg-neutral-800/30">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="border-t border-[#2A2A2A] px-3.5 py-3 bg-[#141414] font-mono text-xs">
+          <div className="grid grid-cols-2 gap-3 text-[11px]">
             <div>
-              <p className="text-neutral-500">Alert Type</p>
-              <p className="text-white capitalize">{alert.type}</p>
+              <p className="text-[#737373]">Category</p>
+              <p className="text-[#F5F5F5] capitalize">{alert.type}</p>
             </div>
             <div>
-              <p className="text-neutral-500">Severity</p>
-              <p className={`font-medium ${config.color}`}>{config.label}</p>
+              <p className="text-[#737373]">Severity Rating</p>
+              <p className={config.color}>{config.label}</p>
             </div>
             <div>
-              <p className="text-neutral-500">Started</p>
-              <p className="text-white">{formatDateTime(alert.startTime)}</p>
+              <p className="text-[#737373]">Effective Since</p>
+              <p className="text-[#F5F5F5]">{formatDateTime(alert.startTime)}</p>
             </div>
             <div>
-              <p className="text-neutral-500">Expires</p>
-              <p className="text-white">{alert.endTime ? formatDateTime(alert.endTime) : 'Ongoing'}</p>
+              <p className="text-[#737373]">Expiry</p>
+              <p className="text-[#F5F5F5]">{alert.endTime ? formatDateTime(alert.endTime) : 'Continuous Monitoring'}</p>
             </div>
           </div>
         </div>
@@ -152,7 +168,7 @@ function AlertCard({ alert, isExpanded, onToggle }: { alert: WeatherAlert; isExp
 function formatTimeRange(start: string, end?: string): string {
   const startDate = new Date(start);
   const startStr = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (!end) return `Since ${startStr}`;
+  if (!end) return `Active since ${startStr}`;
   const endDate = new Date(end);
   const endStr = endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return `${startStr} – ${endStr}`;

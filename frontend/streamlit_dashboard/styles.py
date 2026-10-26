@@ -1,65 +1,79 @@
 """
-WeatherPulse Dashboard — Design System & CSS
-Premium dark-mode weather intelligence aesthetic.
+WeatherPulse Dashboard — Black-First Design System & Styles
+Precision meteorological intelligence aesthetic inspired by scientific and financial terminals.
 """
 
-# ── Colour Palette ──────────────────────────────────────────────
+# ── Design Tokens & Colour Palette ──────────────────────────────────────
 COLORS = {
-    "bg_primary": "#05070B",
-    "bg_secondary": "#0A0F18",
-    "bg_card": "#101722",
-    "bg_card_hover": "#162033",
-    "border": "#243248",
-    "border_accent": "#38BDF8",
-    "text_primary": "#F8FAFC",
-    "text_secondary": "#A7B4C7",
-    "text_muted": "#718096",
-    "accent_cyan": "#22D3EE",
-    "accent_blue": "#38BDF8",
-    "accent_indigo": "#6366F1",
-    "accent_amber": "#F59E0B",
-    "accent_coral": "#F97316",
-    "accent_red": "#EF4444",
-    "accent_green": "#10B981",
-    "accent_teal": "#14B8A6",
-    "accent_purple": "#8B5CF6",
-    "gradient_start": "#06B6D4",
-    "gradient_end": "#3B82F6",
-    "severity_info": "#3B82F6",
-    "severity_watch": "#F59E0B",
-    "severity_high": "#EF4444",
-    "severity_extreme": "#DC2626",
-    "severity_none": "#10B981",
+    # Core Surfaces
+    "bg_primary": "#090909",
+    "bg_secondary": "#101010",
+    "bg_card": "#171717",
+    "bg_card_hover": "#202020",
+    "border": "#2A2A2A",
+    "border_subtle": "#1F1F1F",
+    "border_accent": "#E7B75A",
+
+    # Core Typography
+    "text_primary": "#F5F5F5",
+    "text_secondary": "#A3A3A3",
+    "text_muted": "#737373",
+
+    # Brand & Semantic Accents
+    "primary_highlight": "#E7B75A",
+    "accent_amber": "#E7B75A",
+    "accent_gold": "#D4A347",
+    "accent_green": "#3EA874",
+    "accent_red": "#D9534F",
+    "accent_coral": "#E07A5F",
+    "accent_cyan": "#E7B75A",     # Replaced blue/cyan dominance with warm highlight
+    "accent_blue": "#7899B8",     # Restrained slate-blue for precipitation/water
+    "accent_indigo": "#8A94A6",   # Muted graphite-indigo
+    "accent_teal": "#4E9F8E",     # Muted sage-teal
+    "accent_purple": "#9A8C98",   # Muted mauve-purple
+
+    # Background Gradients (subtle graphite, zero neon/cyan)
+    "gradient_start": "#171717",
+    "gradient_end": "#101010",
+
+    # Severities & Status
+    "severity_none": "#3EA874",
+    "severity_info": "#7899B8",
+    "severity_watch": "#E7B75A",
+    "severity_high": "#E07A5F",
+    "severity_extreme": "#D9534F",
 }
 
-# Temperature colour scale (Plotly-compatible)
+# Temperature sequential scale (Scientific, restrained)
 TEMP_COLORSCALE = [
-    [0.0, "#2563EB"],   # Cold – blue
-    [0.25, "#06B6D4"],  # Cool – cyan
-    [0.45, "#10B981"],  # Mild – green
-    [0.65, "#F59E0B"],  # Warm – amber
-    [0.85, "#F97316"],  # Hot – coral
-    [1.0, "#EF4444"],   # Extreme – red
+    [0.0, "#3B5B82"],   # Cold – steel slate
+    [0.25, "#4E878C"],  # Cool – muted sage
+    [0.50, "#C2A676"],  # Mild – warm sand
+    [0.75, "#E7B75A"],  # Warm – amber
+    [1.0, "#C24D47"],   # Extreme – restrained brick red
 ]
 
+# Rainfall sequential scale (Slate to soft azure, zero neon)
 RAIN_COLORSCALE = [
-    [0.0, "#1E3A5F"],
-    [0.25, "#2563EB"],
-    [0.5, "#3B82F6"],
-    [0.75, "#06B6D4"],
-    [1.0, "#67E8F9"],
+    [0.0, "#151B22"],
+    [0.25, "#2C3E50"],
+    [0.50, "#4A6572"],
+    [0.75, "#6A89A7"],
+    [1.0, "#8FAAC8"],
 ]
 
+# Humidity sequential scale (Sand to sage-slate)
 HUMIDITY_COLORSCALE = [
-    [0.0, "#F59E0B"],
-    [0.5, "#10B981"],
-    [1.0, "#3B82F6"],
+    [0.0, "#C2A676"],
+    [0.5, "#4E9F8E"],
+    [1.0, "#5C7C99"],
 ]
 
+# Wind speed sequential scale (Green to warm amber to restrained red)
 WIND_COLORSCALE = [
-    [0.0, "#10B981"],
-    [0.5, "#F59E0B"],
-    [1.0, "#EF4444"],
+    [0.0, "#3EA874"],
+    [0.5, "#E7B75A"],
+    [1.0, "#D9534F"],
 ]
 
 
@@ -67,26 +81,31 @@ WIND_COLORSCALE = [
 PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="Inter, Segoe UI, sans-serif", color=COLORS["text_primary"], size=12),
-    margin=dict(l=40, r=20, t=40, b=40),
+    font=dict(family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", color=COLORS["text_secondary"], size=11),
+    margin=dict(l=44, r=20, t=36, b=40),
     xaxis=dict(
-        gridcolor="rgba(51,65,85,0.4)",
-        zerolinecolor="rgba(51,65,85,0.4)",
-        tickfont=dict(color=COLORS["text_secondary"]),
+        gridcolor="rgba(255,255,255,0.04)",
+        zerolinecolor="rgba(255,255,255,0.08)",
+        tickfont=dict(color=COLORS["text_muted"], size=10, family="JetBrains Mono, monospace"),
+        linecolor=COLORS["border"],
     ),
     yaxis=dict(
-        gridcolor="rgba(51,65,85,0.4)",
-        zerolinecolor="rgba(51,65,85,0.4)",
-        tickfont=dict(color=COLORS["text_secondary"]),
+        gridcolor="rgba(255,255,255,0.04)",
+        zerolinecolor="rgba(255,255,255,0.08)",
+        tickfont=dict(color=COLORS["text_muted"], size=10, family="JetBrains Mono, monospace"),
+        linecolor=COLORS["border"],
     ),
     legend=dict(
-        bgcolor="rgba(0,0,0,0)",
-        font=dict(color=COLORS["text_secondary"], size=11),
+        bgcolor="rgba(23,23,23,0.85)",
+        bordercolor=COLORS["border"],
+        borderwidth=1,
+        font=dict(color=COLORS["text_secondary"], size=10),
     ),
     hoverlabel=dict(
         bgcolor=COLORS["bg_card"],
-        font_size=12,
-        font_family="Inter, Segoe UI, sans-serif",
+        font_size=11,
+        font_family="Inter, sans-serif",
+        font_color=COLORS["text_primary"],
         bordercolor=COLORS["border"],
     ),
 )
@@ -104,181 +123,243 @@ def get_plotly_layout(**overrides):
 GLOBAL_CSS = f"""
 <style>
 /* ── Import fonts ─────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ── Root variables ───────────────────── */
 :root {{
     --bg-primary: {COLORS['bg_primary']};
     --bg-secondary: {COLORS['bg_secondary']};
     --bg-card: {COLORS['bg_card']};
+    --bg-card-hover: {COLORS['bg_card_hover']};
     --border: {COLORS['border']};
+    --border-subtle: {COLORS['border_subtle']};
     --text-primary: {COLORS['text_primary']};
     --text-secondary: {COLORS['text_secondary']};
-    --accent-cyan: {COLORS['accent_cyan']};
-    --accent-blue: {COLORS['accent_blue']};
+    --text-muted: {COLORS['text_muted']};
     --accent-amber: {COLORS['accent_amber']};
-    --accent-coral: {COLORS['accent_coral']};
-    --accent-red: {COLORS['accent_red']};
     --accent-green: {COLORS['accent_green']};
+    --accent-red: {COLORS['accent_red']};
+    --accent-blue: {COLORS['accent_blue']};
 }}
 
-/* ── Base ─────────────────────────────── */
+/* ── Base application background ─────────────────────────────── */
 html, body, [data-testid="stAppViewContainer"],
-[data-testid="stApp"] {{
-    background:
-        radial-gradient(circle at 78% -15%, rgba(14,116,144,0.16), transparent 29rem),
-        radial-gradient(circle at -10% 35%, rgba(30,64,175,0.10), transparent 27rem),
-        var(--bg-primary) !important;
+[data-testid="stApp"], .main .block-container {{
+    background-color: var(--bg-primary) !important;
     color: var(--text-primary) !important;
-    font-family: 'Inter', 'Segoe UI', sans-serif !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}}
+
+/* Remove default oversized top padding in Streamlit */
+.main .block-container {{
+    padding-top: 1.5rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 1400px;
 }}
 
 /* ── Sidebar ──────────────────────────── */
 [data-testid="stSidebar"] {{
-    background: linear-gradient(180deg, #0B111B 0%, #06090F 100%) !important;
+    background-color: {COLORS['bg_secondary']} !important;
     border-right: 1px solid {COLORS['border']} !important;
+}}
+[data-testid="stSidebar"] > div:first-child {{
+    background-color: {COLORS['bg_secondary']} !important;
 }}
 [data-testid="stSidebar"] .stMarkdown h1,
 [data-testid="stSidebar"] .stMarkdown h2,
 [data-testid="stSidebar"] .stMarkdown h3 {{
     color: {COLORS['text_primary']} !important;
+    letter-spacing: -0.01em;
 }}
 [data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] .stMarkdown li {{
     color: {COLORS['text_secondary']} !important;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
 }}
+[data-testid="stSidebar"] .stRadio label,
 [data-testid="stSidebar"] .stSelectbox label,
 [data-testid="stSidebar"] .stMultiSelect label,
-[data-testid="stSidebar"] .stSlider label,
-[data-testid="stSidebar"] .stRadio label {{
-    color: {COLORS['text_secondary']} !important;
-    font-weight: 500;
-    font-size: 0.82rem;
+[data-testid="stSidebar"] .stSlider label {{
+    color: {COLORS['text_muted']} !important;
+    font-weight: 600;
+    font-size: 0.72rem;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
 }}
 
-/* ── Header typography ────────────────── */
-.stMarkdown h1 {{
-    background: linear-gradient(135deg, {COLORS['accent_cyan']}, {COLORS['accent_blue']});
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em;
+/* ── Radio Navigation styling ─────────── */
+[data-testid="stSidebar"] [data-testid="stRadio"] > div {{
+    gap: 4px;
 }}
-.stMarkdown h2 {{
+[data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child {{
+    display: none;
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] label {{
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid transparent !important;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    background: transparent;
+    color: {COLORS['text_secondary']} !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {{
+    background: {COLORS['bg_card']} !important;
     color: {COLORS['text_primary']} !important;
-    font-weight: 700 !important;
-    border-bottom: 2px solid {COLORS['border']};
-    padding-bottom: 0.5rem;
-    margin-top: 2rem;
+    border-color: {COLORS['border_subtle']} !important;
 }}
-.stMarkdown h3 {{
-    color: {COLORS['accent_cyan']} !important;
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-checked="true"],
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {{
+    background: {COLORS['bg_card']} !important;
+    color: {COLORS['text_primary']} !important;
+    border-color: {COLORS['border']} !important;
+    border-left: 3px solid {COLORS['accent_amber']} !important;
     font-weight: 600 !important;
+}}
+
+/* ── Typography ───────────────────────── */
+h1, h2, h3, h4, h5, h6 {{
+    color: {COLORS['text_primary']} !important;
+    letter-spacing: -0.02em !important;
+}}
+h1 {{
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.4rem !important;
+}}
+h2 {{
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    border-bottom: 1px solid {COLORS['border']};
+    padding-bottom: 0.4rem;
+    margin-top: 1.5rem;
+}}
+h3 {{
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    color: {COLORS['text_primary']} !important;
 }}
 
 /* ── Tabs ─────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {{
-    gap: 2px;
+    gap: 0;
     background: {COLORS['bg_secondary']};
-    border-radius: 12px;
-    padding: 4px;
+    border-radius: 4px;
+    padding: 2px;
     border: 1px solid {COLORS['border']};
 }}
 .stTabs [data-baseweb="tab"] {{
-    border-radius: 10px;
+    border-radius: 3px;
     color: {COLORS['text_secondary']};
     font-weight: 500;
-    padding: 10px 20px;
-    font-size: 0.88rem;
+    padding: 7px 16px;
+    font-size: 0.82rem;
+    border: none !important;
+    background: transparent !important;
 }}
 .stTabs [aria-selected="true"] {{
-    background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(59,130,246,0.15)) !important;
-    color: {COLORS['accent_cyan']} !important;
-    border-bottom: none !important;
-    font-weight: 600;
+    background: {COLORS['bg_card']} !important;
+    color: {COLORS['accent_amber']} !important;
+    font-weight: 600 !important;
+    border: 1px solid {COLORS['border']} !important;
 }}
 
-/* ── Metric cards ─────────────────────── */
+/* ── Native Metrics ───────────────────── */
 [data-testid="stMetric"] {{
-    background: linear-gradient(145deg, rgba(22,32,51,0.96), rgba(12,18,29,0.96));
+    background: {COLORS['bg_card']};
     border: 1px solid {COLORS['border']};
-    border-radius: 12px;
-    padding: 16px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}}
-[data-testid="stMetric"]:hover {{
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    border-color: {COLORS['border_accent']};
+    border-radius: 4px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }}
 [data-testid="stMetricLabel"] {{
-    color: {COLORS['text_secondary']} !important;
-    font-size: 0.78rem !important;
+    color: {COLORS['text_muted']} !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
 }}
 [data-testid="stMetricValue"] {{
     color: {COLORS['text_primary']} !important;
-    font-weight: 700 !important;
-    font-size: 1.6rem !important;
-}}
-[data-testid="stMetricDelta"] {{
-    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    font-size: 1.45rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
 }}
 
 /* ── Buttons ──────────────────────────── */
 .stButton > button {{
-    background: linear-gradient(135deg, {COLORS['accent_cyan']}, {COLORS['accent_blue']}) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    padding: 0.5rem 1.2rem !important;
-    transition: all 0.2s ease !important;
-    box-shadow: 0 2px 8px rgba(6,182,212,0.25) !important;
+    background: {COLORS['bg_card']} !important;
+    color: {COLORS['text_primary']} !important;
+    border: 1px solid {COLORS['border']} !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+    font-size: 0.82rem !important;
+    padding: 0.45rem 1rem !important;
+    transition: all 0.15s ease !important;
 }}
 .stButton > button:hover {{
-    box-shadow: 0 4px 16px rgba(6,182,212,0.4) !important;
-    transform: translateY(-1px);
+    background: {COLORS['bg_card_hover']} !important;
+    border-color: {COLORS['accent_amber']} !important;
+    color: {COLORS['accent_amber']} !important;
+}}
+.stButton > button:active {{
+    background: {COLORS['border']} !important;
 }}
 
-/* ── Select boxes, inputs ─────────────── */
+/* ── Inputs & Selectors ───────────────── */
 .stSelectbox [data-baseweb="select"],
-.stMultiSelect [data-baseweb="select"] {{
+.stMultiSelect [data-baseweb="select"],
+.stTextInput > div > div {{
     background: {COLORS['bg_card']} !important;
     border-color: {COLORS['border']} !important;
-    border-radius: 8px !important;
+    border-radius: 4px !important;
+    color: {COLORS['text_primary']} !important;
+    font-size: 0.85rem;
 }}
 .stSelectbox [data-baseweb="select"] > div,
 .stMultiSelect [data-baseweb="select"] > div {{
     color: {COLORS['text_primary']} !important;
 }}
-
-/* ── Expander ─────────────────────────── */
-.streamlit-expanderHeader {{
-    background: {COLORS['bg_card']} !important;
-    border: 1px solid {COLORS['border']} !important;
-    border-radius: 8px !important;
-    color: {COLORS['text_primary']} !important;
-    font-weight: 500;
+.stSelectbox label, .stMultiSelect label, .stTextInput label {{
+    color: {COLORS['text_muted']} !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }}
 
-/* ── Data editor / tables ─────────────── */
+/* ── Expanders ────────────────────────── */
+[data-testid="stExpander"] {{
+    background: {COLORS['bg_secondary']} !important;
+    border: 1px solid {COLORS['border']} !important;
+    border-radius: 4px !important;
+}}
+[data-testid="stExpander"] details summary {{
+    color: {COLORS['text_secondary']} !important;
+    font-weight: 500;
+    font-size: 0.85rem;
+}}
+[data-testid="stExpander"] details summary:hover {{
+    color: {COLORS['text_primary']} !important;
+}}
+
+/* ── Tables & DataFrames ──────────────── */
 [data-testid="stDataFrame"] {{
     border: 1px solid {COLORS['border']} !important;
-    border-radius: 8px;
-    overflow: hidden;
+    border-radius: 4px;
+    background: {COLORS['bg_secondary']};
 }}
 
 /* ── Divider ──────────────────────────── */
 hr {{
-    border-color: {COLORS['border']} !important;
-    opacity: 0.4;
+    border: none;
+    height: 1px;
+    background: {COLORS['border']} !important;
+    margin: 1.25rem 0 !important;
 }}
 
 /* ── Scrollbar ────────────────────────── */
@@ -291,142 +372,176 @@ hr {{
 }}
 ::-webkit-scrollbar-thumb {{
     background: {COLORS['border']};
-    border-radius: 3px;
+    border-radius: 2px;
 }}
 ::-webkit-scrollbar-thumb:hover {{
     background: {COLORS['text_muted']};
 }}
 
-/* ── Alert/status badges ──────────────── */
-.severity-badge {{
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+/* ── Refined Editorial Header ─────────── */
+.editorial-header, .command-header {{
+    background: {COLORS['bg_secondary']};
+    border: 1px solid {COLORS['border']};
+    border-left: 3px solid {COLORS['accent_amber']};
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
 }}
-.severity-none {{ background: rgba(16,185,129,0.15); color: #10B981; }}
-.severity-low  {{ background: rgba(59,130,246,0.15); color: #3B82F6; }}
-.severity-moderate {{ background: rgba(245,158,11,0.15); color: #F59E0B; }}
-.severity-high {{ background: rgba(239,68,68,0.15); color: #EF4444; }}
-.severity-extreme {{ background: rgba(220,38,38,0.20); color: #FCA5A5; }}
+.editorial-eyebrow, .command-eyebrow {{
+    color: {COLORS['accent_amber']};
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}}
+.editorial-title, .command-title {{
+    color: {COLORS['text_primary']};
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.25rem 0;
+}}
+.editorial-copy, .command-copy {{
+    color: {COLORS['text_secondary']};
+    font-size: 0.82rem;
+    margin: 0;
+    line-height: 1.4;
+}}
+.editorial-meta, .command-rail {{
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.6rem;
+    color: {COLORS['text_muted']};
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+}}
+.editorial-dot, .command-dot {{
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: {COLORS['accent_green']};
+    display: inline-block;
+}}
 
 /* ── KPI Card Custom Component ────────── */
 .kpi-card {{
     background: {COLORS['bg_card']};
     border: 1px solid {COLORS['border']};
-    border-radius: 14px;
-    padding: 20px 24px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035), 0 12px 26px rgba(0,0,0,0.22);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-top: 2px solid {COLORS['accent_amber']};
+    border-radius: 4px;
+    padding: 12px 14px;
     position: relative;
-    overflow: hidden;
-}}
-.kpi-card::before {{
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, {COLORS['accent_cyan']}, {COLORS['accent_blue']});
-}}
-.kpi-card:hover {{
-    transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.28);
 }}
 .kpi-label {{
-    color: {COLORS['text_secondary']};
-    font-size: 0.75rem;
+    color: {COLORS['text_muted']};
+    font-size: 0.68rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 6px;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
 }}
 .kpi-value {{
     color: {COLORS['text_primary']};
-    font-size: 1.8rem;
-    font-weight: 700;
+    font-size: 1.35rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.02em;
     line-height: 1.2;
 }}
 .kpi-delta {{
-    font-size: 0.78rem;
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
     font-weight: 500;
     margin-top: 4px;
 }}
 .kpi-delta.positive {{ color: {COLORS['accent_green']}; }}
 .kpi-delta.negative {{ color: {COLORS['accent_red']}; }}
-.kpi-delta.neutral  {{ color: {COLORS['text_muted']}; }}
+.kpi-delta.neutral  {{ color: {COLORS['text_secondary']}; }}
 
 /* ── Status Pill ──────────────────────── */
 .status-pill {{
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid {COLORS['border']};
+    background: {COLORS['bg_card']};
 }}
-.status-pill.online  {{ background: rgba(16,185,129,0.12); color: #10B981; }}
-.status-pill.offline {{ background: rgba(239,68,68,0.12); color: #EF4444; }}
-.status-pill.degraded {{ background: rgba(245,158,11,0.12); color: #F59E0B; }}
+.status-pill.online  {{ color: {COLORS['accent_green']}; border-color: rgba(62, 168, 116, 0.3); }}
+.status-pill.offline {{ color: {COLORS['accent_red']}; border-color: rgba(217, 83, 79, 0.3); }}
+.status-pill.degraded {{ color: {COLORS['accent_amber']}; border-color: rgba(231, 183, 90, 0.3); }}
 
 .status-dot {{
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     display: inline-block;
 }}
-.status-dot.online  {{ background: #10B981; box-shadow: 0 0 6px #10B981; }}
-.status-dot.offline {{ background: #EF4444; box-shadow: 0 0 6px #EF4444; }}
-.status-dot.degraded {{ background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }}
+.status-dot.online  {{ background: {COLORS['accent_green']}; }}
+.status-dot.offline {{ background: {COLORS['accent_red']}; }}
+.status-dot.degraded {{ background: {COLORS['accent_amber']}; }}
+
+/* ── Alert badges & Cards ─────────────── */
+.severity-badge {{
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 600;
+    font-size: 0.68rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}}
+.severity-none {{ background: rgba(62,168,116,0.15); color: {COLORS['accent_green']}; border: 1px solid rgba(62,168,116,0.3); }}
+.severity-low, .severity-info {{ background: rgba(120,153,184,0.15); color: {COLORS['accent_blue']}; border: 1px solid rgba(120,153,184,0.3); }}
+.severity-moderate, .severity-watch {{ background: rgba(231,183,90,0.15); color: {COLORS['accent_amber']}; border: 1px solid rgba(231,183,90,0.3); }}
+.severity-high, .severity-severe {{ background: rgba(224,122,95,0.15); color: {COLORS['accent_coral']}; border: 1px solid rgba(224,122,95,0.3); }}
+.severity-extreme {{ background: rgba(217,83,79,0.20); color: {COLORS['accent_red']}; border: 1px solid rgba(217,83,79,0.4); }}
 
 /* ── Section Divider ──────────────────── */
 .section-divider {{
     height: 1px;
-    background: linear-gradient(90deg, transparent, {COLORS['border']}, transparent);
-    margin: 2rem 0;
+    background: {COLORS['border']};
+    margin: 1.5rem 0;
 }}
 
-/* ── No-data empty state ──────────────── */
+/* ── Empty & Error States ─────────────── */
 .empty-state {{
     text-align: center;
-    padding: 3rem 2rem;
+    padding: 2.5rem 1.5rem;
     color: {COLORS['text_muted']};
     background: {COLORS['bg_card']};
     border: 1px dashed {COLORS['border']};
-    border-radius: 12px;
+    border-radius: 4px;
 }}
 .empty-state h3 {{
     color: {COLORS['text_secondary']} !important;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.95rem !important;
 }}
 .empty-state p {{
-    font-size: 0.88rem;
+    font-size: 0.82rem;
+    color: {COLORS['text_muted']};
+    max-width: 420px;
+    margin: 0 auto;
 }}
 
-/* ── Footer branding ──────────────────── */
+/* ── Footer ───────────────────────────── */
 .footer-brand {{
     text-align: center;
-    padding: 1.5rem 0;
+    padding: 1.25rem 0;
     color: {COLORS['text_muted']};
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
     border-top: 1px solid {COLORS['border']};
-    margin-top: 3rem;
+    margin-top: 2.5rem;
 }}
-
-.command-header {{
-    position: relative; overflow: hidden; margin: 0 0 1.6rem; padding: 1.6rem 1.8rem;
-    border: 1px solid rgba(56,189,248,0.26); border-radius: 18px;
-    background: linear-gradient(110deg, rgba(13,23,38,0.96), rgba(9,14,23,0.88));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 36px rgba(0,0,0,0.25);
-}}
-.command-header::after {{ content:''; position:absolute; width:18rem; height:18rem; right:-7rem; top:-12rem; border-radius:50%; background:radial-gradient(circle, rgba(34,211,238,0.22), transparent 66%); }}
-.command-eyebrow {{ color:{COLORS['accent_cyan']}; font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }}
-.command-title {{ color:{COLORS['text_primary']}; font-size:2rem; line-height:1.1; font-weight:760; letter-spacing:-.035em; margin:.35rem 0 .45rem; }}
-.command-copy {{ color:{COLORS['text_secondary']}; font-size:.93rem; max-width:46rem; margin:0; }}
-.command-rail {{ display:flex; align-items:center; gap:.55rem; margin-top:1rem; color:{COLORS['text_muted']}; font-size:.76rem; font-family:'JetBrains Mono', monospace; }}
-.command-dot {{ width:.5rem; height:.5rem; border-radius:50%; background:{COLORS['accent_green']}; box-shadow:0 0 12px {COLORS['accent_green']}; }}
 </style>
 """

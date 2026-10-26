@@ -17,7 +17,7 @@ export function App() {
   const selectedState = useSelectedState();
   const selectedLocation = useSelectedLocation();
   const viewport = useViewport();
-  const { setViewport, setNavigationLevel, setSelectedState, setSelectedLocation, flyToIndia, setIndiaOverview } = useAppStore();
+  const { setViewport, setSelectedLocation, flyToIndia, setIndiaOverview } = useAppStore();
   
   // Real data query for India overview
   const { data: indiaOverview } = useIndiaOverviewQuery();
@@ -51,7 +51,6 @@ export function App() {
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
         return;
       }
@@ -76,7 +75,7 @@ export function App() {
   }, [navigationLevel, selectedLocation, flyToIndia, setSelectedLocation]);
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#07111F] text-slate-100 select-none">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#090909] text-[#F5F5F5] select-none font-sans">
       {/* 1. Dedicated Top Navigation Bar */}
       <TopNavbar
         currentStyle={mapStyle}
@@ -88,11 +87,11 @@ export function App() {
       {/* 2. Weather Summary KPI Strip */}
       <WeatherSummaryStrip />
 
-      {/* 3. Main Geospatial Workspace (Flexbox Split) */}
+      {/* 3. Main Geospatial Workspace (Split Layout) */}
       <div className="flex-1 flex overflow-hidden min-h-0 relative">
-        {/* Primary Interactive Map Stage (65-75% on desktop) */}
+        {/* Primary Interactive Map Stage */}
         <main 
-          className="flex-1 relative overflow-hidden bg-[#07111F] flex flex-col min-w-0" 
+          className="flex-1 relative overflow-hidden bg-[#090909] flex flex-col min-w-0" 
           id="main-map-stage"
           role="region"
           aria-label="Interactive India Weather Map"
@@ -105,7 +104,7 @@ export function App() {
               is3D={is3D}
             />
 
-            {/* Docked Map Controls (Top-Left corner of Map Stage) */}
+            {/* Docked Map Controls (Top-Left corner) */}
             <MapControls
               activeLayer={weatherLayer}
               onLayerChange={setWeatherLayer}
@@ -123,25 +122,25 @@ export function App() {
 
             {/* Geodetic Telemetry Pill (Bottom-Right corner) */}
             <div 
-              className="absolute bottom-4 right-4 z-10 pointer-events-none hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[#07111F]/90 backdrop-blur-md border border-[#1E3A5F]/70 text-[11px] text-slate-400 font-mono shadow-xl"
+              className="absolute bottom-4 right-4 z-10 pointer-events-none hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded bg-[#101010]/95 backdrop-blur-md border border-[#2A2A2A] text-[11px] text-[#A3A3A3] font-mono shadow-xl"
               aria-live="polite"
             >
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="text-cyan-300 font-semibold tracking-wider uppercase text-[10px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E7B75A]" />
+                <span className="text-[#F5F5F5] font-semibold tracking-wider uppercase text-[10px]">
                   {navigationLevel} {selectedState ? `• ${selectedState}` : ''}
                 </span>
               </div>
-              <span className="text-[#1E3A5F]">|</span>
+              <span className="text-[#2A2A2A]">|</span>
               <span className="tabular-nums">LAT {viewport.center.lat.toFixed(3)}°</span>
               <span className="tabular-nums">LON {viewport.center.lon.toFixed(3)}°</span>
-              <span className="tabular-nums text-slate-300">Z {viewport.zoom.toFixed(1)}</span>
-              <span className="tabular-nums text-slate-400">{Math.round(viewport.pitch)}° PITCH</span>
+              <span className="tabular-nums text-[#F5F5F5]">Z {viewport.zoom.toFixed(1)}</span>
+              <span className="tabular-nums text-[#737373]">{Math.round(viewport.pitch)}° PITCH</span>
             </div>
           </div>
         </main>
 
-        {/* Right-Side Contextual Insights Panel (25-35%, independently scrollable) */}
+        {/* Right-Side Contextual Insights Panel */}
         <InsightsPanel
           isCollapsed={isPanelCollapsed}
           onToggleCollapse={() => setIsPanelCollapsed((prev) => !prev)}

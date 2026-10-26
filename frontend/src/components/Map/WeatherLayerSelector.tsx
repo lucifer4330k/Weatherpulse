@@ -1,15 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { 
-  Sun, 
-  CloudRain, 
-  Droplets, 
-  Wind, 
   Layers, 
   X, 
   ChevronDown,
   Mountain,
 } from 'lucide-react';
-import { WeatherLayerType, WEATHER_LAYERS, getWeatherLayerConfig, MAP_STYLES, MapStyleId } from '../../services/mapUtils';
+import { WEATHER_LAYERS, getWeatherLayerConfig } from '../../services/mapUtils';
 
 export function WeatherLayerSelector() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -47,7 +43,6 @@ export function WeatherLayerSelector() {
 
   const handleLayerChange = (layer: 'temperature' | 'rainfall' | 'humidity' | 'wind' | 'none') => {
     setLocalWeatherLayer(layer);
-    // Dispatch custom event for MapContainer to handle
     window.dispatchEvent(new CustomEvent('weather-layer-change', { detail: layer }));
   };
 
@@ -62,86 +57,86 @@ export function WeatherLayerSelector() {
     window.dispatchEvent(new CustomEvent('terrain-toggle', { detail: newValue }));
   };
 
-  const MAP_STYLES = [
-    { id: 'dark', label: 'Dark', description: 'Dark canvas for data viz' },
-    { id: 'satellite', label: 'Satellite', description: 'Real satellite imagery' },
-    { id: 'hybrid', label: 'Hybrid', description: 'Satellite with labels' },
+  const MAP_STYLE_OPTIONS = [
+    { id: 'dark', label: 'Dark Canvas', description: 'Deep contrast for weather data', icon: '🌙' },
+    { id: 'satellite', label: 'Satellite', description: 'Real orbital satellite imagery', icon: '🌍' },
+    { id: 'hybrid', label: 'Hybrid', description: 'Satellite with borders and labels', icon: '🛰️' },
   ] as const;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative font-sans" ref={dropdownRef}>
       {/* Main button */}
       <button
         ref={buttonRef}
         onClick={() => setIsExpanded(!isExpanded)}
-        className="glass-panel p-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-neutral-950/30 transition-all duration-200 hover:scale-105 active:scale-95 group"
+        className="bg-[#101010] border border-[#2A2A2A] p-2 rounded flex items-center gap-2 shadow-lg shadow-black/60 transition-colors hover:border-[#E7B75A]/60 group"
         aria-expanded={isExpanded}
         aria-haspopup="listbox"
         aria-label="Map layers and style"
         title="Map Layers & Style"
       >
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
-          <Layers className="w-5 h-5 text-white" />
+        <div className="w-8 h-8 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center text-[#E7B75A]">
+          <Layers className="w-4 h-4" />
         </div>
         {isExpanded && (
-          <div className="flex items-center gap-2 text-neutral-300 text-sm font-medium hidden sm:block">
+          <div className="flex items-center gap-2 text-[#A3A3A3] text-xs font-mono hidden sm:block">
             <span className="capitalize">{getWeatherLayerConfig(localWeatherLayer)?.label || 'None'}</span>
-            <ChevronDown className="w-4 h-4 transition-transform group-data-[expanded=true]:rotate-180" />
+            <ChevronDown className="w-3.5 h-3.5 inline ml-1" />
           </div>
         )}
       </button>
 
       {/* Dropdown panel */}
       {isExpanded && (
-        <div className="absolute bottom-full right-0 mb-2 w-72 glass-panel rounded-2xl border border-neutral-800/50 shadow-2xl shadow-neutral-950/50 overflow-hidden animate-slide-up z-50">
+        <div className="absolute bottom-full right-0 mb-2 w-72 bg-[#101010] border border-[#2A2A2A] rounded shadow-2xl shadow-black/80 overflow-hidden z-50">
           {/* Header */}
-          <div className="p-4 border-b border-neutral-800/50">
+          <div className="p-3 border-b border-[#2A2A2A]">
             <div className="flex items-center justify-between">
-              <h3 className="text-white font-semibold text-sm flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary-400" />
-                Map Layers & Style
+              <h3 className="text-[#F5F5F5] font-semibold text-xs flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-[#E7B75A]" />
+                Map Layers & Overlays
               </h3>
               <button
                 onClick={() => setIsExpanded(false)}
-                className="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800/50 transition-colors"
+                className="p-1 rounded text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717] transition-colors"
                 aria-label="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           {/* Weather Layer Section */}
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-neutral-400 text-xs font-medium uppercase tracking-wider">Weather Overlay</h4>
-              <span className="text-neutral-500 text-xs">{getWeatherLayerConfig(localWeatherLayer)?.label || 'None'}</span>
+              <h4 className="text-[#737373] text-[10px] font-mono font-semibold uppercase tracking-wider">Active Overlay</h4>
+              <span className="text-[#A3A3A3] text-[10px] font-mono">{getWeatherLayerConfig(localWeatherLayer)?.label || 'None'}</span>
             </div>
             
-            <div className="space-y-2" role="listbox" aria-label="Weather overlay">
+            <div className="space-y-1" role="listbox" aria-label="Weather overlay">
               {[...WEATHER_LAYERS, { id: 'none' as const, label: 'None', icon: '✕', description: 'No weather overlay', colorScale: [], unit: '', dataField: '', tooltipFormatter: () => '' }].map((layer) => (
                 <button
                   key={layer.id}
                   onClick={() => { handleLayerChange(layer.id); setIsExpanded(false); }}
                   role="option"
                   aria-selected={localWeatherLayer === layer.id}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center gap-2.5 p-2 rounded transition-colors ${
                     localWeatherLayer === layer.id
-                      ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
-                      : 'text-neutral-300 hover:bg-neutral-800/50 hover:text-white'
+                      ? 'bg-[#171717] text-[#E7B75A] border border-[#E7B75A]/40'
+                      : 'text-[#A3A3A3] hover:bg-[#171717] hover:text-[#F5F5F5] border border-transparent'
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl bg-neutral-800/50">
+                  <div className="w-7 h-7 rounded flex items-center justify-center text-sm bg-[#171717] border border-[#2A2A2A]">
                     {layer.icon}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="font-medium text-sm truncate">{layer.label}</p>
-                    <p className="text-neutral-500 text-xs truncate">{layer.description}</p>
+                    <p className="font-medium text-xs truncate">{layer.label}</p>
+                    <p className="text-[#737373] text-[10px] truncate">{layer.description}</p>
                   </div>
                   {localWeatherLayer === layer.id && (
-                    <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <div className="w-4 h-4 rounded-full bg-[#E7B75A] flex items-center justify-center text-[#090909]">
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
                   )}
@@ -150,40 +145,36 @@ export function WeatherLayerSelector() {
             </div>
           </div>
 
-          <div className="border-t border-neutral-800/50 my-2" />
+          <div className="border-t border-[#2A2A2A] my-1" />
 
           {/* Map Style Section */}
-          <div className="p-4 space-y-3">
-            <h4 className="text-neutral-400 text-xs font-medium uppercase tracking-wider">Map Style</h4>
+          <div className="p-3 space-y-2">
+            <h4 className="text-[#737373] text-[10px] font-mono font-semibold uppercase tracking-wider">Canvas Style</h4>
             
-            <div className="space-y-2" role="radiogroup" aria-label="Map style">
-              {[
-                { id: 'dark', label: 'Dark', description: 'Dark canvas for data visualization', icon: '🌙' },
-                { id: 'satellite', label: 'Satellite', description: 'Real satellite imagery', icon: '🛰️' },
-                { id: 'hybrid', label: 'Hybrid', description: 'Satellite with labels', icon: '🗺️' },
-              ].map((style) => (
+            <div className="space-y-1" role="radiogroup" aria-label="Map style">
+              {MAP_STYLE_OPTIONS.map((style) => (
                 <button
                   key={style.id}
-                  onClick={() => { handleStyleChange(style.id as 'dark' | 'satellite' | 'hybrid'); setIsExpanded(false); }}
+                  onClick={() => { handleStyleChange(style.id); setIsExpanded(false); }}
                   role="radio"
                   aria-checked={localMapStyle === style.id}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center gap-2.5 p-2 rounded transition-colors ${
                     localMapStyle === style.id
-                      ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
-                      : 'text-neutral-300 hover:bg-neutral-800/50 hover:text-white'
+                      ? 'bg-[#171717] text-[#E7B75A] border border-[#E7B75A]/40'
+                      : 'text-[#A3A3A3] hover:bg-[#171717] hover:text-[#F5F5F5] border border-transparent'
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl bg-neutral-800/50">
+                  <div className="w-7 h-7 rounded flex items-center justify-center text-sm bg-[#171717] border border-[#2A2A2A]">
                     {style.icon}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="font-medium text-sm truncate">{style.label}</p>
-                    <p className="text-neutral-500 text-xs truncate">{style.description}</p>
+                    <p className="font-medium text-xs truncate">{style.label}</p>
+                    <p className="text-[#737373] text-[10px] truncate">{style.description}</p>
                   </div>
                   {localMapStyle === style.id && (
-                    <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <div className="w-4 h-4 rounded-full bg-[#E7B75A] flex items-center justify-center text-[#090909]">
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
                   )}
@@ -192,29 +183,31 @@ export function WeatherLayerSelector() {
             </div>
           </div>
 
-          <div className="border-t border-neutral-800/50 my-2" />
+          <div className="border-t border-[#2A2A2A] my-1" />
 
           {/* Terrain Toggle */}
-          <div className="p-4">
+          <div className="p-3">
             <button
               onClick={() => handleTerrainToggle()}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
+              className={`w-full flex items-center gap-2.5 p-2 rounded transition-colors ${
                 localShowTerrain
-                  ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
-                  : 'text-neutral-300 hover:bg-neutral-800/50 hover:text-white'
+                  ? 'bg-[#171717] text-[#E7B75A] border border-[#E7B75A]/40'
+                  : 'text-[#A3A3A3] hover:bg-[#171717] hover:text-[#F5F5F5] border border-transparent'
               }`}
             >
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl bg-neutral-800/50">
-                <Mountain className="w-5 h-5" />
+              <div className="w-7 h-7 rounded flex items-center justify-center text-sm bg-[#171717] border border-[#2A2A2A]">
+                <Mountain className="w-4 h-4 text-[#E7B75A]" />
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="font-medium text-sm">3D Terrain</p>
-                <p className="text-neutral-500 text-xs">Elevation exaggeration 1.5x</p>
+                <p className="font-medium text-xs">3D Elevation Relief</p>
+                <p className="text-[#737373] text-[10px]">Terrarium elevation model</p>
               </div>
-              <div className={`w-10 h-5 rounded-full flex items-center transition-all duration-200 ${
-                localShowTerrain ? 'bg-primary-500 translate-x-5' : 'bg-neutral-700 translate-x-0'
+              <div className={`w-8 h-4 rounded-full flex items-center transition-colors p-0.5 ${
+                localShowTerrain ? 'bg-[#E7B75A]' : 'bg-[#2A2A2A]'
               }`}>
-                <div className="w-4 h-4 rounded-full bg-white ml-0.5 shadow-md" />
+                <div className={`w-3 h-3 rounded-full bg-[#090909] shadow-sm transform transition-transform ${
+                  localShowTerrain ? 'translate-x-4' : 'translate-x-0'
+                }`} />
               </div>
             </button>
           </div>

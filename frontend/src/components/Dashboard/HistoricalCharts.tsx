@@ -10,10 +10,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  Cell,
 } from 'recharts';
 import { Calendar, TrendingUp, TrendingDown, Minus, BarChart2, Droplets } from 'lucide-react';
-import type { WeatherDashboardData, WeatherTrends, HistoricalDataPoint } from '../../types';
+import type { WeatherDashboardData } from '../../types';
 
 interface HistoricalChartsProps {
   data: WeatherDashboardData | null;
@@ -57,13 +56,13 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
 
   if (!trends) {
     return (
-      <div className="glass-card p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
-          <BarChart2 className="w-8 h-8 text-neutral-500" />
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-8 text-center">
+        <div className="w-12 h-12 mx-auto mb-3 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center">
+          <BarChart2 className="w-6 h-6 text-[#737373]" />
         </div>
-        <h3 className="text-neutral-400 font-medium">No historical data available</h3>
-        <p className="text-neutral-500 text-sm mt-1">
-          Historical trends will appear here once data is loaded
+        <h3 className="text-[#A3A3A3] font-medium text-sm">No historical data available</h3>
+        <p className="text-[#737373] text-xs mt-1">
+          Historical trends will appear here once observations are recorded
         </p>
       </div>
     );
@@ -71,31 +70,34 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
 
   if (filteredTempData.length === 0 && filteredPrecipData.length === 0) {
     return (
-      <div className="glass-card p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
-          <BarChart2 className="w-8 h-8 text-neutral-500" />
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-8 text-center">
+        <div className="w-12 h-12 mx-auto mb-3 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center">
+          <BarChart2 className="w-6 h-6 text-[#737373]" />
         </div>
-        <h3 className="text-neutral-400 font-medium">No readings in this period</h3>
-        <p className="text-neutral-500 text-sm mt-1">Choose a longer range or wait for the streaming pipeline to collect observations.</p>
+        <h3 className="text-[#A3A3A3] font-medium text-sm">No readings in this period</h3>
+        <p className="text-[#737373] text-xs mt-1">Select a longer time window or wait for streaming observations.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Period Selector */}
       <div className="flex items-center justify-between">
-        <h4 className="text-neutral-200 font-medium flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          Historical Trends
+        <h4 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider flex items-center gap-2">
+          <Calendar className="w-3.5 h-3.5 text-[#E7B75A]" />
+          Historical Observations
         </h4>
-        <div className="tab-list">
+        <div className="flex items-center gap-1 bg-[#101010] border border-[#2A2A2A] rounded p-0.5">
           {(['7d', '30d', '90d', '1y'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`tab ${period === p ? 'data-[state=active]' : ''}`}
-              data-state={period === p ? 'active' : 'inactive'}
+              className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-colors ${
+                period === p 
+                  ? 'bg-[#171717] text-[#E7B75A] border border-[#E7B75A]/40' 
+                  : 'text-[#737373] hover:text-[#F5F5F5]'
+              }`}
             >
               {p.toUpperCase()}
             </button>
@@ -104,83 +106,86 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <StatCard
-          icon={<TrendingUp className="w-5 h-5 text-red-400" />}
-          label="Max Temp"
-          value={`${tempStats.max.toFixed(1)}°`}
+          icon={<TrendingUp className="w-4 h-4 text-[#E07A5F]" />}
+          label="Max Observed"
+          value={`${tempStats.max.toFixed(1)}°C`}
           trend={tempStats.trend > 0 ? 'up' : tempStats.trend < 0 ? 'down' : 'neutral'}
           trendValue={Math.abs(tempStats.trend).toFixed(1)}
         />
         <StatCard
-          icon={<TrendingDown className="w-5 h-5 text-blue-400" />}
-          label="Min Temp"
-          value={`${tempStats.min.toFixed(1)}°`}
+          icon={<TrendingDown className="w-4 h-4 text-[#7899B8]" />}
+          label="Min Observed"
+          value={`${tempStats.min.toFixed(1)}°C`}
         />
         <StatCard
-          icon={<Minus className="w-5 h-5 text-yellow-400" />}
-          label="Avg Temp"
-          value={`${tempStats.avg.toFixed(1)}°`}
+          icon={<Minus className="w-4 h-4 text-[#E7B75A]" />}
+          label="Mean Temp"
+          value={`${tempStats.avg.toFixed(1)}°C`}
         />
         <StatCard
-          icon={<Droplets className="w-5 h-5 text-cyan-400" />}
-          label="Total Rainfall"
+          icon={<Droplets className="w-4 h-4 text-[#7899B8]" />}
+          label="Cumulative Rain"
           value={`${precipStats.total.toFixed(1)} mm`}
         />
       </div>
 
       {/* Temperature Chart */}
-      <div className="glass-card p-5">
-        <h5 className="text-neutral-200 font-medium mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-red-400" />
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-4">
+        <h5 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2">
+          <TrendingUp className="w-3.5 h-3.5 text-[#E7B75A]" />
           Temperature Trend ({period.toUpperCase()})
         </h5>
-        <div className="h-64">
+        <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={filteredTempData}>
+            <AreaChart data={filteredTempData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#E7B75A" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#E7B75A" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgb(30 41 59 / 0.5)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#222222" vertical={false} />
               <XAxis
                 dataKey="timestamp"
                 tickFormatter={(value) => formatChartDate(value, period)}
-                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
-                axisLine={{ stroke: 'rgb(51 65 85)' }}
-                tickLine={{ stroke: 'rgb(51 65 85)' }}
+                tick={{ fill: '#737373', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: '#2A2A2A' }}
+                tickLine={{ stroke: '#2A2A2A' }}
               />
               <YAxis
-                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
-                axisLine={{ stroke: 'rgb(51 65 85)' }}
-                tickLine={{ stroke: 'rgb(51 65 85)' }}
-                label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', fill: 'rgb(100 116 139)', fontSize: 11 }}
+                tick={{ fill: '#737373', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: '#2A2A2A' }}
+                tickLine={{ stroke: '#2A2A2A' }}
+                unit="°C"
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgb(15 23 42)',
-                  border: '1px solid rgb(51 65 85)',
-                  borderRadius: '8px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                  backgroundColor: '#171717',
+                  border: '1px solid #2A2A2A',
+                  borderRadius: '4px',
+                  color: '#F5F5F5',
+                  fontSize: '11px',
+                  fontFamily: 'JetBrains Mono',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.8)',
                 }}
                 labelFormatter={(value) => formatTooltipDate(value)}
-                formatter={(value: number) => [value.toFixed(1) + '°C', 'Temperature']}
+                formatter={(value: number) => [`${value.toFixed(1)}°C`, 'Temperature']}
               />
               <Legend
-                wrapperStyle={{ paddingTop: '10px' }}
-                formatter={() => 'Temperature'}
+                wrapperStyle={{ paddingTop: '8px', fontSize: '11px', fontFamily: 'JetBrains Mono' }}
+                formatter={() => 'Temperature (°C)'}
               />
               <Area
                 type="monotone"
                 dataKey="temperature"
-                stroke="#ef4444"
-                strokeWidth={2}
+                stroke="#E7B75A"
+                strokeWidth={1.75}
                 fillOpacity={1}
                 fill="url(#tempGradient)"
                 dot={false}
-                activeDot={{ r: 6, strokeWidth: 2 }}
+                activeDot={{ r: 4, strokeWidth: 1.5, stroke: '#E7B75A', fill: '#171717' }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -188,45 +193,48 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
       </div>
 
       {/* Precipitation Chart */}
-      <div className="glass-card p-5">
-        <h5 className="text-neutral-200 font-medium mb-4 flex items-center gap-2">
-          <Droplets className="w-4 h-4 text-cyan-400" />
-          Precipitation ({period.toUpperCase()})
+      <div className="bg-[#101010] border border-[#2A2A2A] rounded p-4">
+        <h5 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Droplets className="w-3.5 h-3.5 text-[#7899B8]" />
+          Precipitation Records ({period.toUpperCase()})
         </h5>
-        <div className="h-64">
+        <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredPrecipData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgb(30 41 59 / 0.5)" vertical={false} />
+            <LineChart data={filteredPrecipData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#222222" vertical={false} />
               <XAxis
                 dataKey="timestamp"
                 tickFormatter={(value) => formatChartDate(value, period)}
-                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
-                axisLine={{ stroke: 'rgb(51 65 85)' }}
-                tickLine={{ stroke: 'rgb(51 65 85)' }}
+                tick={{ fill: '#737373', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: '#2A2A2A' }}
+                tickLine={{ stroke: '#2A2A2A' }}
               />
               <YAxis
-                tick={{ fill: 'rgb(100 116 139)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
-                axisLine={{ stroke: 'rgb(51 65 85)' }}
-                tickLine={{ stroke: 'rgb(51 65 85)' }}
-                label={{ value: 'Precipitation (mm)', angle: -90, position: 'insideLeft', fill: 'rgb(100 116 139)', fontSize: 11 }}
+                tick={{ fill: '#737373', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                axisLine={{ stroke: '#2A2A2A' }}
+                tickLine={{ stroke: '#2A2A2A' }}
+                unit="mm"
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgb(15 23 42)',
-                  border: '1px solid rgb(51 65 85)',
-                  borderRadius: '8px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                  backgroundColor: '#171717',
+                  border: '1px solid #2A2A2A',
+                  borderRadius: '4px',
+                  color: '#F5F5F5',
+                  fontSize: '11px',
+                  fontFamily: 'JetBrains Mono',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.8)',
                 }}
                 labelFormatter={(value) => formatTooltipDate(value)}
-                formatter={(value: number) => [value.toFixed(1) + ' mm', 'Precipitation']}
+                formatter={(value: number) => [`${value.toFixed(1)} mm`, 'Precipitation']}
               />
               <Line
                 type="monotone"
                 dataKey="precipitation"
-                stroke="#06b6d4"
-                strokeWidth={2}
+                stroke="#7899B8"
+                strokeWidth={1.75}
                 dot={false}
-                activeDot={{ r: 6, strokeWidth: 2, fill: '#06b6d4' }}
+                activeDot={{ r: 4, strokeWidth: 1.5, stroke: '#7899B8', fill: '#171717' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -234,12 +242,12 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
       </div>
 
       {/* Data Source Note */}
-      <div className="flex items-center gap-2 text-neutral-500 text-sm p-3 glass-subtle rounded-xl">
-        <Calendar className="w-4 h-4" />
+      <div className="flex items-center gap-2 text-[#737373] text-xs font-mono p-2.5 bg-[#101010] border border-[#2A2A2A] rounded">
+        <Calendar className="w-3.5 h-3.5 text-[#E7B75A]" />
         <span>
-          Data source: {trends.temperature.data[0]?.source === 'cassandra' ? 'Cassandra (Observed)' : 'Open-Meteo (Model)'}
+          Source: {trends.temperature.data[0]?.source === 'cassandra' ? 'Cassandra Storage' : 'Open-Meteo Archive'}
           {' • '}
-          {trends.temperature.data.length} data points
+          {trends.temperature.data.length} observations
         </span>
       </div>
     </div>
@@ -254,18 +262,18 @@ function StatCard({ icon, label, value, trend, trendValue }: {
   trendValue?: string;
 }) {
   return (
-    <div className="glass-card p-4">
-      <div className="flex items-center gap-2 text-neutral-500 text-sm mb-1">
+    <div className="bg-[#101010] border border-[#2A2A2A] rounded p-3">
+      <div className="flex items-center gap-2 text-[#737373] text-xs mb-1">
         {icon}
-        <span className="font-medium">{label}</span>
+        <span className="font-mono text-[11px] text-[#A3A3A3] uppercase tracking-wider">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-xl font-mono font-semibold text-[#F5F5F5] tabular-nums">{value}</p>
       {trend && trendValue && (
-        <p className={`text-xs mt-1 flex items-center gap-1 ${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-green-400' : 'text-neutral-500'}`}>
+        <p className={`text-[11px] font-mono mt-1 flex items-center gap-1 ${trend === 'up' ? 'text-[#D9534F]' : trend === 'down' ? 'text-[#3EA874]' : 'text-[#737373]'}`}>
           {trend === 'up' && <TrendingUp className="w-3 h-3" />}
           {trend === 'down' && <TrendingDown className="w-3 h-3" />}
           {trend === 'neutral' && <Minus className="w-3 h-3" />}
-          <span>{trendValue}°</span>
+          <span>Δ {trendValue}°C</span>
         </p>
       )}
     </div>

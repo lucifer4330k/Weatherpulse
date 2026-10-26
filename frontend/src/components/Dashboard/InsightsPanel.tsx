@@ -8,18 +8,11 @@ import {
   AlertTriangle, 
   Info,
   MapPin,
-  Thermometer,
-  CloudRain,
-  Flame,
-  Snowflake,
-  Compass,
+  CloudRain, 
+  Flame, 
+  Snowflake, 
+  Compass, 
   ArrowRight,
-  TrendingUp,
-  BarChart2,
-  Calendar,
-  Clock,
-  Layers,
-  ChevronDown
 } from 'lucide-react';
 import { useAppStore, useSelectedLocationName, useSelectedLocation, useSelectedState } from '../../store/useAppStore';
 import { useDashboardData, useIndiaOverview as useIndiaOverviewQuery } from '../../hooks/useWeather';
@@ -28,7 +21,7 @@ import { Forecast } from './Forecast';
 import { HistoricalCharts } from './HistoricalCharts';
 import { Alerts } from './Alerts';
 import { DataFreshness } from './DataFreshness';
-import type { WeatherDashboardData, StateWeatherSummary } from '../../types';
+import type { StateWeatherSummary } from '../../types';
 
 interface InsightsPanelProps {
   isCollapsed: boolean;
@@ -45,7 +38,6 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
   const setNavigationLevel = useAppStore((state) => state.setNavigationLevel);
 
   const [activeTab, setActiveTab] = useState<'current' | 'forecast' | 'historical' | 'alerts'>('current');
-  const [nationalSearch, setNationalSearch] = useState('');
 
   // Fetch location weather when selected
   const hasSelectedLocation = Boolean(selectedLocation && locationName);
@@ -56,7 +48,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
   );
 
   // Read India national overview
-  const { data: overview, isLoading: isOverviewLoading } = useIndiaOverviewQuery();
+  const { data: overview } = useIndiaOverviewQuery();
 
   // Calculate National Leaderboards when no location selected
   const nationalLeaderboards = useMemo(() => {
@@ -90,21 +82,21 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
   // If collapsed to side
   if (isCollapsed) {
     return (
-      <div className="h-full w-10 bg-[#0B1526] border-l border-[#1E2E48] flex flex-col items-center justify-between py-4 z-20 flex-shrink-0 select-none">
+      <div className="h-full w-10 bg-[#101010] border-l border-[#2A2A2A] flex flex-col items-center justify-between py-4 z-20 flex-shrink-0 select-none">
         <button
           onClick={onToggleCollapse}
-          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E2E48] transition-colors"
+          className="p-1.5 rounded text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717] transition-colors"
           title="Expand Insights Panel"
           aria-label="Expand Insights Panel"
         >
-          <ChevronLeft className="w-5 h-5 text-cyan-400" />
+          <ChevronLeft className="w-4 h-4 text-[#E7B75A]" />
         </button>
 
-        <div className="rotate-90 text-[11px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">
-          {hasSelectedLocation ? locationName : 'Weather Intelligence'}
+        <div className="rotate-90 text-[10px] font-mono font-semibold uppercase tracking-widest text-[#737373] whitespace-nowrap">
+          {hasSelectedLocation ? locationName : 'STATION INTELLIGENCE'}
         </div>
 
-        <div className="w-2 h-2 rounded-full bg-cyan-400 geo-radar-pulse" />
+        <div className="w-1.5 h-1.5 rounded-full bg-[#E7B75A]" />
       </div>
     );
   }
@@ -115,32 +107,30 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
   const tabs = [
     { id: 'current', label: 'Conditions' },
     { id: 'forecast', label: 'Forecast' },
-    { id: 'historical', label: 'Trends' },
+    { id: 'historical', label: 'History' },
     { id: 'alerts', label: 'Alerts', count: weatherData?.alerts?.length || 0 },
   ];
 
   return (
-    <aside className="h-full w-full lg:w-[400px] xl:w-[440px] bg-[#0B1526] border-l border-[#1E2E48] flex flex-col z-20 flex-shrink-0 overflow-hidden shadow-2xl shadow-black/60">
+    <aside className="h-full w-full lg:w-[400px] xl:w-[430px] bg-[#101010] border-l border-[#2A2A2A] flex flex-col z-20 flex-shrink-0 overflow-hidden font-sans">
       {/* ── Top Header of Insights Panel ── */}
-      <div className="p-4 bg-[#0D1828] border-b border-[#1E2E48] flex items-center justify-between gap-3 flex-shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white shadow-md shadow-cyan-600/20 flex-shrink-0">
+      <div className="p-3.5 bg-[#101010] border-b border-[#2A2A2A] flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded bg-[#171717] border border-[#2A2A2A] flex items-center justify-center text-[#E7B75A] flex-shrink-0">
             {hasSelectedLocation ? (
-              <MapPin className="w-5 h-5 text-cyan-200" />
+              <MapPin className="w-4 h-4" />
             ) : (
-              <Compass className="w-5 h-5 text-cyan-200" />
+              <Compass className="w-4 h-4" />
             )}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-white font-bold text-base truncate leading-tight">
-                {hasSelectedLocation ? locationName : 'India National Overview'}
-              </h2>
-            </div>
-            <p className="text-slate-400 text-xs truncate mt-0.5">
+            <h2 className="text-[#F5F5F5] font-bold text-sm truncate leading-tight">
+              {hasSelectedLocation ? locationName : 'National Weather Stream'}
+            </h2>
+            <p className="text-[#737373] text-[11px] font-mono truncate mt-0.5">
               {hasSelectedLocation 
-                ? (selectedState ? `State: ${selectedState} • Live Observations` : 'Selected City Observation')
-                : '37 States & Union Territories Reporting'}
+                ? (selectedState ? `STATE: ${selectedState} · TELEMETRY ACTIVE` : 'LOCATION OBSERVATION')
+                : '37 STATES & UNION TERRITORIES REPORTING'}
             </p>
           </div>
         </div>
@@ -149,27 +139,27 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
           {hasSelectedLocation && (
             <button
               onClick={() => refetch()}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E2E48] transition-colors"
+              className="p-1.5 rounded text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717] transition-colors"
               title="Refresh Location Weather"
               aria-label="Refresh Location Weather"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-3.5 h-3.5" />
             </button>
           )}
 
           {hasSelectedLocation ? (
             <button
               onClick={flyToIndia}
-              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 transition-all flex items-center gap-1"
+              className="px-2 py-1 text-xs font-mono font-medium rounded bg-[#171717] text-[#A3A3A3] border border-[#2A2A2A] hover:text-[#F5F5F5] hover:border-[#E7B75A] transition-colors flex items-center gap-1"
               title="Return to National Overview"
             >
               <span>Overview</span>
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
           ) : (
             <button
               onClick={onToggleCollapse}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E2E48] transition-colors"
+              className="p-1.5 rounded text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717] transition-colors"
               title="Collapse Panel"
               aria-label="Collapse Panel"
             >
@@ -184,20 +174,20 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
         /* Scenario A: A Location IS selected — Show Tabbed City Inspector */
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Tabs */}
-          <div className="px-4 py-2 bg-[#091222] border-b border-[#1E2E48] flex gap-1 flex-shrink-0">
+          <div className="px-3 py-1.5 bg-[#090909] border-b border-[#2A2A2A] flex gap-1 flex-shrink-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all text-center flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-1 px-2 rounded text-xs font-mono transition-colors text-center flex items-center justify-center gap-1.5 ${
                   activeTab === tab.id
-                    ? 'bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                    ? 'bg-[#171717] text-[#E7B75A] font-semibold border border-[#2A2A2A]'
+                    : 'text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]/60'
                 }`}
               >
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] font-bold flex items-center justify-center">
+                  <span className="w-3.5 h-3.5 rounded bg-[#D9534F]/20 text-[#D9534F] border border-[#D9534F]/40 text-[9px] font-bold flex items-center justify-center">
                     {tab.count}
                   </span>
                 )}
@@ -206,21 +196,21 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
           </div>
 
           {/* Tab Content Container */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3.5 space-y-3.5">
             {isActuallyLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-                <p className="text-white text-sm font-medium">Fetching real-time weather...</p>
-                <p className="text-slate-500 text-xs">Querying Open-Meteo & Cassandra archive</p>
+              <div className="flex flex-col items-center justify-center py-20 gap-2.5 text-center">
+                <Loader2 className="w-6 h-6 text-[#E7B75A] animate-spin" />
+                <p className="text-[#F5F5F5] text-xs font-medium">Fetching real-time weather telemetry...</p>
+                <p className="text-[#737373] text-[11px] font-mono">Open-Meteo & Cassandra stream archive</p>
               </div>
             ) : error && !weatherData ? (
-              <div className="p-6 text-center rounded-xl bg-rose-950/20 border border-rose-800/40 space-y-3">
-                <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto" />
-                <h3 className="text-white font-semibold text-sm">Unable to load location details</h3>
-                <p className="text-slate-400 text-xs">{error instanceof Error ? error.message : 'Backend connection error'}</p>
+              <div className="p-4 text-center rounded bg-[#171717] border border-[#D9534F]/40 space-y-2">
+                <AlertTriangle className="w-6 h-6 text-[#D9534F] mx-auto" />
+                <h3 className="text-[#F5F5F5] font-semibold text-xs">Failed to load station telemetry</h3>
+                <p className="text-[#737373] text-[11px]">{error instanceof Error ? error.message : 'Backend connection error'}</p>
                 <button
                   onClick={() => refetch()}
-                  className="px-3 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 text-xs font-semibold"
+                  className="px-2.5 py-1 rounded bg-[#171717] text-[#D9534F] border border-[#D9534F]/40 hover:bg-[#202020] text-xs font-mono font-medium"
                 >
                   Retry Request
                 </button>
@@ -238,47 +228,47 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
         </div>
       ) : (
         /* Scenario B: No location selected — Show India National Highlights & Leaderboards */
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-5">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3.5 space-y-4">
           {/* Quick Notice */}
-          <div className="p-3.5 rounded-xl bg-[#0D1828] border border-[#1E2E48] flex items-start gap-3">
-            <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-            <p className="text-slate-300 text-xs leading-relaxed">
-              Click any state on the map or select below to inspect real-time temperature, rainfall, 48-hour forecasts, and 30-day historical analytics.
+          <div className="p-3 rounded bg-[#171717] border border-[#2A2A2A] flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-[#E7B75A] flex-shrink-0 mt-0.5" />
+            <p className="text-[#A3A3A3] text-xs leading-relaxed">
+              Select any station on the map or click a state below to inspect real-time observations, 48-hour forecasts, and 30-day historical analytics.
             </p>
           </div>
 
           {nationalLeaderboards ? (
             <>
               {/* Leaderboard 1: Warmest Regions */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-amber-400">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono font-semibold text-[#E07A5F]">
                   <span className="flex items-center gap-1.5">
-                    <Flame className="w-4 h-4 text-amber-400" />
-                    Warmest Reporting States
+                    <Flame className="w-3.5 h-3.5 text-[#E07A5F]" />
+                    HIGHEST OBSERVED TEMPERATURE
                   </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Top 5</span>
+                  <span className="text-[10px] text-[#737373]">TOP 5</span>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {nationalLeaderboards.hottest.map((s, idx) => (
                     <button
                       key={s.code}
                       onClick={() => handleSelectState(s)}
-                      className="w-full p-2.5 rounded-lg bg-[#0D1828] border border-[#1E2E48] hover:border-amber-500/40 hover:bg-[#122036] transition-all flex items-center justify-between group text-left"
+                      className="w-full p-2 rounded bg-[#171717] border border-[#2A2A2A] hover:border-[#E07A5F]/60 hover:bg-[#202020] transition-colors flex items-center justify-between group text-left"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 text-xs font-mono flex items-center justify-center font-bold">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-4 h-4 rounded bg-[#101010] text-[#737373] text-[10px] font-mono flex items-center justify-center font-bold">
                           {idx + 1}
                         </span>
                         <div className="truncate">
-                          <p className="text-white text-xs font-medium group-hover:text-amber-300 transition-colors truncate">
+                          <p className="text-[#F5F5F5] text-xs font-medium group-hover:text-[#E07A5F] transition-colors truncate">
                             {s.name}
                           </p>
-                          <p className="text-slate-500 text-[10px] uppercase font-mono">{s.current.weatherDescription}</p>
+                          <p className="text-[#737373] text-[10px] uppercase font-mono">{s.current.weatherDescription}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-amber-400 font-mono font-bold text-xs">{s.current.temperature.toFixed(1)}°C</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+                        <span className="text-[#E07A5F] font-mono font-bold text-xs">{s.current.temperature.toFixed(1)}°C</span>
+                        <ArrowRight className="w-3 h-3 text-[#737373] group-hover:text-[#E07A5F] group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </button>
                   ))}
@@ -286,35 +276,35 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
               </div>
 
               {/* Leaderboard 2: Coolest Regions */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-sky-400">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono font-semibold text-[#7899B8]">
                   <span className="flex items-center gap-1.5">
-                    <Snowflake className="w-4 h-4 text-sky-400" />
-                    Coolest Reporting States
+                    <Snowflake className="w-3.5 h-3.5 text-[#7899B8]" />
+                    LOWEST OBSERVED TEMPERATURE
                   </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Top 5</span>
+                  <span className="text-[10px] text-[#737373]">TOP 5</span>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {nationalLeaderboards.coolest.map((s, idx) => (
                     <button
                       key={s.code}
                       onClick={() => handleSelectState(s)}
-                      className="w-full p-2.5 rounded-lg bg-[#0D1828] border border-[#1E2E48] hover:border-sky-500/40 hover:bg-[#122036] transition-all flex items-center justify-between group text-left"
+                      className="w-full p-2 rounded bg-[#171717] border border-[#2A2A2A] hover:border-[#7899B8]/60 hover:bg-[#202020] transition-colors flex items-center justify-between group text-left"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 text-xs font-mono flex items-center justify-center font-bold">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-4 h-4 rounded bg-[#101010] text-[#737373] text-[10px] font-mono flex items-center justify-center font-bold">
                           {idx + 1}
                         </span>
                         <div className="truncate">
-                          <p className="text-white text-xs font-medium group-hover:text-sky-300 transition-colors truncate">
+                          <p className="text-[#F5F5F5] text-xs font-medium group-hover:text-[#7899B8] transition-colors truncate">
                             {s.name}
                           </p>
-                          <p className="text-slate-500 text-[10px] uppercase font-mono">{s.current.weatherDescription}</p>
+                          <p className="text-[#737373] text-[10px] uppercase font-mono">{s.current.weatherDescription}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sky-300 font-mono font-bold text-xs">{s.current.temperature.toFixed(1)}°C</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all" />
+                        <span className="text-[#7899B8] font-mono font-bold text-xs">{s.current.temperature.toFixed(1)}°C</span>
+                        <ArrowRight className="w-3 h-3 text-[#737373] group-hover:text-[#7899B8] group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </button>
                   ))}
@@ -323,29 +313,29 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
 
               {/* Leaderboard 3: Precipitation Activity */}
               {nationalLeaderboards.rainy.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-blue-400">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono font-semibold text-[#7899B8]">
                     <span className="flex items-center gap-1.5">
-                      <CloudRain className="w-4 h-4 text-blue-400" />
-                      Active Rainfall Reports
+                      <CloudRain className="w-3.5 h-3.5 text-[#7899B8]" />
+                      ACTIVE PRECIPITATION REPORTS
                     </span>
-                    <span className="text-[11px] text-slate-500 font-mono">{nationalLeaderboards.rainy.length} States</span>
+                    <span className="text-[10px] text-[#737373]">{nationalLeaderboards.rainy.length} STATIONS</span>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {nationalLeaderboards.rainy.map((s) => (
                       <button
                         key={s.code}
                         onClick={() => handleSelectState(s)}
-                        className="w-full p-2.5 rounded-lg bg-[#0D1828] border border-[#1E2E48] hover:border-blue-500/40 hover:bg-[#122036] transition-all flex items-center justify-between group text-left"
+                        className="w-full p-2 rounded bg-[#171717] border border-[#2A2A2A] hover:border-[#7899B8]/60 hover:bg-[#202020] transition-colors flex items-center justify-between group text-left"
                       >
-                        <p className="text-white text-xs font-medium group-hover:text-blue-300 transition-colors truncate">
+                        <p className="text-[#F5F5F5] text-xs font-medium group-hover:text-[#7899B8] transition-colors truncate">
                           {s.name}
                         </p>
                         <div className="flex items-center gap-2">
-                          <span className="text-blue-300 font-mono font-bold text-xs">
+                          <span className="text-[#F5F5F5] font-mono font-bold text-xs">
                             {(s.current.precipitation ?? 0).toFixed(1)} mm
                           </span>
-                          <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
+                          <ArrowRight className="w-3 h-3 text-[#737373] group-hover:text-[#7899B8] group-hover:translate-x-0.5 transition-all" />
                         </div>
                       </button>
                     ))}
@@ -354,9 +344,9 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
               )}
             </>
           ) : (
-            <div className="py-12 text-center text-slate-500 text-xs">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto text-cyan-400 mb-2" />
-              Loading nationwide weather network...
+            <div className="py-12 text-center text-[#737373] text-xs font-mono">
+              <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#E7B75A] mb-2" />
+              Retrieving nationwide weather telemetry...
             </div>
           )}
         </div>
@@ -364,3 +354,5 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
     </aside>
   );
 }
+
+export default InsightsPanel;

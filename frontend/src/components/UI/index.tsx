@@ -39,7 +39,7 @@ export function ErrorMessage({ message, onRetry, className = '' }: { message: st
 export function Tooltip({ children, content, position = 'top' }: { children: ReactElement; content: ReactNode; position?: 'top' | 'bottom' | 'left' | 'right' }) {
   // Simple tooltip implementation - in production, use a proper tooltip library
   return (
-    <div className="relative inline-block" data-tooltip={typeof content === 'string' ? content : ''}>
+    <div className="relative inline-block" data-position={position} data-tooltip={typeof content === 'string' ? content : ''}>
       {children}
     </div>
   );

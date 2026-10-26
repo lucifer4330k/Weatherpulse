@@ -1,6 +1,6 @@
 """
 WeatherPulse Dashboard — Chart & Map Visualizations
-All Plotly and PyDeck visualizations used across dashboard sections.
+Plotly and PyDeck visualizations styled with the black-first editorial design system.
 """
 
 from typing import Any, Dict, List, Optional
@@ -44,17 +44,17 @@ def india_weather_map(
     rng = vmax - vmin if vmax != vmin else 1
     map_df["_norm"] = (map_df[metric] - vmin) / rng
 
-    # Map normalised value to RGB
+    # Map normalised value to RGB using black-first restrained palette
     cscale = {
         "temperature": _interp_colorscale_rgb,
-        "precipitation": lambda v: _interp_simple_rgb(v, (30, 64, 175), (103, 232, 249)),
-        "humidity": lambda v: _interp_simple_rgb(v, (245, 158, 11), (59, 130, 246)),
-        "wind_speed": lambda v: _interp_simple_rgb(v, (16, 185, 129), (239, 68, 68)),
+        "precipitation": lambda v: _interp_simple_rgb(v, (21, 27, 34), (143, 170, 200)),
+        "humidity": lambda v: _interp_simple_rgb(v, (194, 166, 118), (92, 124, 153)),
+        "wind_speed": lambda v: _interp_simple_rgb(v, (62, 168, 116), (217, 83, 79)),
     }
     color_fn = cscale.get(metric, _interp_colorscale_rgb)
     map_df["_color"] = map_df["_norm"].apply(lambda v: color_fn(v))
 
-    # Tooltip
+    # Tooltip text
     name_col = "state_name" if "state_name" in map_df.columns else "city"
     if name_col not in map_df.columns:
         name_col = map_df.columns[0]
@@ -68,23 +68,30 @@ def india_weather_map(
         data=map_df,
         get_position=["lon", "lat"],
         get_fill_color="_color",
-        get_radius=45000,
-        radius_min_pixels=8,
-        radius_max_pixels=25,
+        get_line_color=[42, 42, 42, 255],
+        line_width_min_pixels=1,
+        stroked=True,
+        get_radius=42000,
+        radius_min_pixels=7,
+        radius_max_pixels=20,
         pickable=True,
         auto_highlight=True,
-        opacity=0.85,
+        opacity=0.9,
     )
 
     view = pdk.ViewState(latitude=22.5, longitude=80.0, zoom=4.2, pitch=0)
-    tooltip = {"html": "<b>{_tooltip}</b>", "style": {
-        "backgroundColor": COLORS["bg_card"],
-        "color": COLORS["text_primary"],
-        "border": f"1px solid {COLORS['border']}",
-        "borderRadius": "8px",
-        "padding": "8px 12px",
-        "fontSize": "13px",
-    }}
+    tooltip = {
+        "html": "<div style='font-family:Inter,sans-serif;'><strong style='color:#F5F5F5;font-size:12px;'>{_tooltip}</strong></div>",
+        "style": {
+            "backgroundColor": "#171717",
+            "color": "#F5F5F5",
+            "border": "1px solid #2A2A2A",
+            "borderRadius": "4px",
+            "padding": "6px 10px",
+            "fontSize": "12px",
+            "boxShadow": "0 4px 12px rgba(0,0,0,0.5)",
+        }
+    }
     deck = pdk.Deck(
         layers=[layer],
         initial_view_state=view,
@@ -96,8 +103,15 @@ def india_weather_map(
 
 
 def _metric_unit(metric: str) -> str:
-    return {"temperature": "°C", "precipitation": "mm", "humidity": "%",
-            "wind_speed": "km/h", "pressure": "hPa", "uv_index": ""}.get(metric, "")
+    return {
+        "temperature": "°C",
+        "feels_like": "°C",
+        "precipitation": "mm",
+        "humidity": "%",
+        "wind_speed": "km/h",
+        "pressure": "hPa",
+        "uv_index": "",
+    }.get(metric, "")
 
 
 def _interp_colorscale_rgb(t: float) -> list:
@@ -111,8 +125,8 @@ def _interp_colorscale_rgb(t: float) -> list:
             frac = (t - t0) / (t1 - t0) if t1 != t0 else 0
             r0, g0, b0 = _hex_to_rgb(c0)
             r1, g1, b1 = _hex_to_rgb(c1)
-            return [int(r0 + (r1 - r0) * frac), int(g0 + (g1 - g0) * frac), int(b0 + (b1 - b0) * frac), 220]
-    return [200, 200, 200, 200]
+            return [int(r0 + (r1 - r0) * frac), int(g0 + (g1 - g0) * frac), int(b0 + (b1 - b0) * frac), 230]
+    return [200, 200, 200, 230]
 
 
 def _interp_simple_rgb(t: float, rgb_low: tuple, rgb_high: tuple) -> list:
@@ -121,7 +135,7 @@ def _interp_simple_rgb(t: float, rgb_low: tuple, rgb_high: tuple) -> list:
         int(rgb_low[0] + (rgb_high[0] - rgb_low[0]) * t),
         int(rgb_low[1] + (rgb_high[1] - rgb_low[1]) * t),
         int(rgb_low[2] + (rgb_high[2] - rgb_low[2]) * t),
-        220,
+        230,
     ]
 
 
@@ -142,27 +156,27 @@ def top_cities_bar(df: pd.DataFrame, metric: str = "temperature", top_n: int = 1
         return _empty_figure("No data for this metric")
 
     color_map = {
-        "temperature": COLORS["accent_coral"],
+        "temperature": COLORS["accent_amber"],
         "precipitation": COLORS["accent_blue"],
         "humidity": COLORS["accent_teal"],
-        "wind_speed": COLORS["accent_amber"],
+        "wind_speed": COLORS["accent_coral"],
     }
-    bar_color = color_map.get(metric, COLORS["accent_cyan"])
+    bar_color = color_map.get(metric, COLORS["accent_amber"])
 
     fig = go.Figure(go.Bar(
         x=sub[metric],
         y=sub[name_col],
         orientation="h",
-        marker=dict(color=bar_color, line=dict(width=0)),
+        marker=dict(color=bar_color, line=dict(color=COLORS["border"], width=1)),
         text=sub[metric].apply(lambda v: f"{v:.1f}"),
         textposition="outside",
-        textfont=dict(color=COLORS["text_secondary"], size=11),
+        textfont=dict(color=COLORS["text_secondary"], size=10, family="JetBrains Mono, monospace"),
         hovertemplate="%{y}: %{x:.1f} " + _metric_unit(metric) + "<extra></extra>",
     ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title or f"Top {top_n} by {metric.replace('_', ' ').title()}", font=dict(size=14)),
-        yaxis=dict(autorange="reversed", categoryorder="total ascending"),
-        height=max(350, top_n * 30),
+        title=dict(text=title or f"Top {top_n} States by {metric.replace('_', ' ').title()}", font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis=dict(autorange="reversed", categoryorder="total ascending", tickfont=dict(size=10, color=COLORS["text_secondary"])),
+        height=max(320, top_n * 26),
         xaxis_title=_metric_unit(metric),
     ))
     return fig
@@ -174,25 +188,25 @@ def rainfall_comparison_bar(df: pd.DataFrame, title: str = "Precipitation by Loc
     sub = df.dropna(subset=["precipitation"]).copy()
     sub = sub[sub["precipitation"] > 0].nlargest(20, "precipitation")
     if sub.empty:
-        return _empty_figure("No precipitation recorded")
+        return _empty_figure("No precipitation recorded across reporting locations")
 
     fig = go.Figure(go.Bar(
         x=sub[name_col],
         y=sub["precipitation"],
         marker=dict(
             color=sub["precipitation"],
-            colorscale=[[0, "#1E3A5F"], [0.5, "#3B82F6"], [1, "#67E8F9"]],
-            line=dict(width=0),
+            colorscale=[[0, "#2C3E50"], [0.5, "#4A6572"], [1, "#8FAAC8"]],
+            line=dict(color=COLORS["border"], width=1),
         ),
         text=sub["precipitation"].apply(lambda v: f"{v:.1f} mm"),
         textposition="outside",
-        textfont=dict(color=COLORS["text_secondary"], size=10),
+        textfont=dict(color=COLORS["text_secondary"], size=9, family="JetBrains Mono, monospace"),
         hovertemplate="%{x}: %{y:.1f} mm<extra></extra>",
     ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title, font=dict(size=14)),
-        yaxis_title="mm",
-        height=400,
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis_title="Precipitation (mm)",
+        height=360,
     ))
     return fig
 
@@ -204,22 +218,22 @@ def rainfall_comparison_bar(df: pd.DataFrame, title: str = "Precipitation by Loc
 def temperature_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
                            title: str = "Temperature Trend") -> go.Figure:
     if df.empty or time_col not in df.columns or "temperature" not in df.columns:
-        return _empty_figure("No temperature data")
+        return _empty_figure("No historical temperature data")
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df[time_col], y=df["temperature"],
         mode="lines",
-        line=dict(color=COLORS["accent_coral"], width=2),
+        line=dict(color=COLORS["accent_amber"], width=1.75),
         fill="tozeroy",
-        fillcolor="rgba(249,115,22,0.08)",
+        fillcolor="rgba(231,183,90,0.06)",
         name="Temperature",
         hovertemplate="%{x|%d %b %H:%M}<br>%{y:.1f} °C<extra></extra>",
     ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title, font=dict(size=14)),
-        yaxis_title="°C",
-        height=350,
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis_title="Temperature (°C)",
+        height=320,
     ))
     return fig
 
@@ -227,7 +241,7 @@ def temperature_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
 def precipitation_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
                               title: str = "Precipitation Trend") -> go.Figure:
     if df.empty or time_col not in df.columns or "precipitation" not in df.columns:
-        return _empty_figure("No precipitation data")
+        return _empty_figure("No historical precipitation data")
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
@@ -237,9 +251,9 @@ def precipitation_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
         hovertemplate="%{x|%d %b %H:%M}<br>%{y:.1f} mm<extra></extra>",
     ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title, font=dict(size=14)),
-        yaxis_title="mm",
-        height=350,
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis_title="Precipitation (mm)",
+        height=320,
     ))
     return fig
 
@@ -247,22 +261,22 @@ def precipitation_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
 def humidity_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
                          title: str = "Humidity Trend") -> go.Figure:
     if df.empty or time_col not in df.columns or "humidity" not in df.columns:
-        return _empty_figure("No humidity data")
+        return _empty_figure("No historical humidity data")
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df[time_col], y=df["humidity"],
         mode="lines",
-        line=dict(color=COLORS["accent_teal"], width=2),
+        line=dict(color=COLORS["accent_teal"], width=1.75),
         fill="tozeroy",
-        fillcolor="rgba(20,184,166,0.08)",
-        name="Humidity",
+        fillcolor="rgba(78,159,142,0.06)",
+        name="Relative Humidity",
         hovertemplate="%{x|%d %b %H:%M}<br>%{y}%<extra></extra>",
     ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title, font=dict(size=14)),
-        yaxis_title="%",
-        height=350,
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis_title="Relative Humidity (%)",
+        height=320,
     ))
     return fig
 
@@ -270,22 +284,22 @@ def humidity_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
 def wind_trend_line(df: pd.DataFrame, time_col: str = "timestamp",
                      title: str = "Wind Speed Trend") -> go.Figure:
     if df.empty or time_col not in df.columns or "wind_speed" not in df.columns:
-        return _empty_figure("No wind speed data")
+        return _empty_figure("No historical wind speed data")
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df[time_col], y=df["wind_speed"],
         mode="lines",
-        line=dict(color=COLORS["accent_amber"], width=2),
+        line=dict(color=COLORS["accent_coral"], width=1.75),
         fill="tozeroy",
-        fillcolor="rgba(245,158,11,0.08)",
+        fillcolor="rgba(224,122,95,0.06)",
         name="Wind Speed",
         hovertemplate="%{x|%d %b %H:%M}<br>%{y:.1f} km/h<extra></extra>",
     ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title, font=dict(size=14)),
-        yaxis_title="km/h",
-        height=350,
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis_title="Wind Speed (km/h)",
+        height=320,
     ))
     return fig
 
@@ -297,8 +311,8 @@ def multi_metric_comparison(
     title: str = "",
 ) -> go.Figure:
     """Overlay the same metric from multiple locations on a single chart."""
-    palette = [COLORS["accent_cyan"], COLORS["accent_coral"], COLORS["accent_amber"],
-               COLORS["accent_teal"], COLORS["accent_purple"], COLORS["accent_green"]]
+    palette = [COLORS["accent_amber"], COLORS["accent_blue"],
+               COLORS["accent_teal"], COLORS["accent_coral"], COLORS["accent_purple"]]
     fig = go.Figure()
     for idx, (name, df) in enumerate(dfs.items()):
         if df.empty or metric not in df.columns or time_col not in df.columns:
@@ -307,13 +321,13 @@ def multi_metric_comparison(
             x=df[time_col], y=df[metric],
             mode="lines",
             name=name,
-            line=dict(color=palette[idx % len(palette)], width=2),
-            hovertemplate=f"{name}<br>%{{x|%d %b %H:%M}}<br>%{{y:.1f}}<extra></extra>",
+            line=dict(color=palette[idx % len(palette)], width=1.75),
+            hovertemplate=f"{name}<br>%{{x|%d %b %H:%M}}<br>%{{y:.1f}} {_metric_unit(metric)}<extra></extra>",
         ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title or f"{metric.replace('_', ' ').title()} Comparison", font=dict(size=14)),
+        title=dict(text=title or f"{metric.replace('_', ' ').title()} Comparison", font=dict(size=12, color=COLORS["text_primary"])),
         yaxis_title=_metric_unit(metric),
-        height=400,
+        height=360,
     ))
     return fig
 
@@ -330,7 +344,7 @@ def hourly_forecast_chart(df: pd.DataFrame, title: str = "48-Hour Forecast") -> 
     fig.add_trace(go.Scatter(
         x=df["time"], y=df["temperature"],
         name="Temperature",
-        line=dict(color=COLORS["accent_coral"], width=2.5),
+        line=dict(color=COLORS["accent_amber"], width=2),
         hovertemplate="%{x|%d %b %H:%M}<br>%{y:.1f} °C<extra></extra>",
     ))
     if "precipitation" in df.columns:
@@ -338,14 +352,14 @@ def hourly_forecast_chart(df: pd.DataFrame, title: str = "48-Hour Forecast") -> 
             x=df["time"], y=df["precipitation"],
             name="Precipitation",
             yaxis="y2",
-            marker=dict(color=COLORS["accent_blue"], opacity=0.5),
+            marker=dict(color=COLORS["accent_blue"], opacity=0.6),
             hovertemplate="%{x|%d %b %H:%M}<br>%{y:.1f} mm<extra></extra>",
         ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title, font=dict(size=14)),
-        yaxis=dict(title="°C", side="left", gridcolor="rgba(51,65,85,0.4)"),
-        yaxis2=dict(title="mm", side="right", overlaying="y", showgrid=False),
-        height=380,
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis=dict(title="Temperature (°C)", side="left"),
+        yaxis2=dict(title="Precipitation (mm)", side="right", overlaying="y", showgrid=False),
+        height=340,
         legend=dict(x=0.01, y=0.99),
     ))
     return fig
@@ -359,34 +373,101 @@ def daily_forecast_chart(df: pd.DataFrame, title: str = "7-Day Forecast") -> go.
     fig.add_trace(go.Scatter(
         x=df["date"], y=df["temperature_max"],
         name="High",
-        line=dict(color=COLORS["accent_coral"], width=2.5),
+        line=dict(color=COLORS["accent_coral"], width=2),
         mode="lines+markers",
-        marker=dict(size=7),
+        marker=dict(size=5),
         hovertemplate="%{x|%d %b}<br>High: %{y:.1f} °C<extra></extra>",
     ))
     fig.add_trace(go.Scatter(
         x=df["date"], y=df["temperature_min"],
         name="Low",
-        line=dict(color=COLORS["accent_cyan"], width=2.5),
+        line=dict(color=COLORS["accent_blue"], width=2),
         mode="lines+markers",
-        marker=dict(size=7),
+        marker=dict(size=5),
         fill="tonexty",
-        fillcolor="rgba(6,182,212,0.08)",
+        fillcolor="rgba(120,153,184,0.08)",
         hovertemplate="%{x|%d %b}<br>Low: %{y:.1f} °C<extra></extra>",
     ))
     if "precipitation_sum" in df.columns:
         fig.add_trace(go.Bar(
             x=df["date"], y=df["precipitation_sum"],
-            name="Rain",
+            name="Rainfall Sum",
             yaxis="y2",
-            marker=dict(color=COLORS["accent_blue"], opacity=0.4),
+            marker=dict(color=COLORS["accent_blue"], opacity=0.5),
             hovertemplate="%{x|%d %b}<br>Rain: %{y:.1f} mm<extra></extra>",
         ))
     fig.update_layout(**get_plotly_layout(
-        title=dict(text=title, font=dict(size=14)),
-        yaxis=dict(title="°C", side="left", gridcolor="rgba(51,65,85,0.4)"),
-        yaxis2=dict(title="mm", side="right", overlaying="y", showgrid=False),
-        height=380,
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        yaxis=dict(title="Temperature (°C)", side="left"),
+        yaxis2=dict(title="Precipitation (mm)", side="right", overlaying="y", showgrid=False),
+        height=340,
+    ))
+    return fig
+
+
+# ═══════════════════════════════════════════════════════════════
+#  ANALYTICAL & DISTRIBUTION CHARTS
+# ═══════════════════════════════════════════════════════════════
+
+def temperature_distribution_histogram(df: pd.DataFrame, title: str = "Observed Temperature Distribution") -> go.Figure:
+    """Distribution of temperatures across Indian reporting stations."""
+    valid = df.dropna(subset=["temperature"])
+    if valid.empty:
+        return _empty_figure("No temperature records available")
+
+    mean_temp = valid["temperature"].mean()
+    median_temp = valid["temperature"].median()
+
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(
+        x=valid["temperature"],
+        nbinsx=15,
+        marker=dict(color=COLORS["accent_amber"], line=dict(color=COLORS["border"], width=1)),
+        name="States",
+        hovertemplate="Temp Range: %{x}°C<br>Count: %{y}<extra></extra>",
+    ))
+    fig.add_vline(
+        x=mean_temp,
+        line_dash="dash",
+        line_color=COLORS["text_primary"],
+        annotation_text=f"Mean: {mean_temp:.1f}°C",
+        annotation_position="top right",
+        annotation_font=dict(size=10, color=COLORS["text_primary"]),
+    )
+    fig.update_layout(**get_plotly_layout(
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        xaxis_title="Temperature (°C)",
+        yaxis_title="Number of States",
+        height=320,
+    ))
+    return fig
+
+
+def temp_vs_humidity_scatter(df: pd.DataFrame, title: str = "Temperature vs. Humidity (Correlation)") -> go.Figure:
+    """Correlation scatter plot between Temperature and Humidity across states."""
+    valid = df.dropna(subset=["temperature", "humidity"])
+    if len(valid) < 3:
+        return _empty_figure("Insufficient data for correlation analysis")
+
+    name_col = "state_name" if "state_name" in valid.columns else "city"
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=valid["temperature"],
+        y=valid["humidity"],
+        mode="markers+text",
+        text=valid["state_code"] if "state_code" in valid.columns else None,
+        textposition="top center",
+        textfont=dict(size=9, color=COLORS["text_muted"], family="JetBrains Mono, monospace"),
+        marker=dict(size=8, color=COLORS["accent_amber"], line=dict(color=COLORS["border"], width=1)),
+        hovertemplate="<b>%{customdata}</b><br>Temp: %{x:.1f}°C<br>Humidity: %{y:.0f}%<extra></extra>",
+        customdata=valid[name_col] if name_col in valid.columns else valid["temperature"],
+    ))
+    fig.update_layout(**get_plotly_layout(
+        title=dict(text=title, font=dict(size=12, color=COLORS["text_primary"])),
+        xaxis_title="Temperature (°C)",
+        yaxis_title="Relative Humidity (%)",
+        height=340,
     ))
     return fig
 
@@ -397,9 +478,14 @@ def daily_forecast_chart(df: pd.DataFrame, title: str = "7-Day Forecast") -> go.
 
 def _empty_figure(message: str = "No data") -> go.Figure:
     fig = go.Figure()
-    fig.add_annotation(text=message, x=0.5, y=0.5, xref="paper", yref="paper",
-                       showarrow=False, font=dict(color=COLORS["text_muted"], size=14))
-    fig.update_layout(**get_plotly_layout(height=250))
+    fig.add_annotation(
+        text=message,
+        x=0.5, y=0.5,
+        xref="paper", yref="paper",
+        showarrow=False,
+        font=dict(color=COLORS["text_muted"], size=12, family="Inter, sans-serif"),
+    )
+    fig.update_layout(**get_plotly_layout(height=260))
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
     return fig

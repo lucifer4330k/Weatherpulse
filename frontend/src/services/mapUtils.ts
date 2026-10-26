@@ -200,8 +200,8 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       type: 'fill',
       source: 'states',
       paint: {
-        'fill-color': '#0a1628',
-        'fill-opacity': 0.3,
+        'fill-color': '#090909',
+        'fill-opacity': 0.35,
         'fill-antialias': true,
       },
     },
@@ -240,28 +240,28 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
           7, 1.5,
           9, 2,
         ],
-        'line-opacity': 0.9,
+        'line-opacity': 0.85,
         'line-blur': 0,
       },
     },
-    // Secondary glow outline for emphasis
+    // Secondary subtle amber outline for emphasis
     {
       id: 'states-outline-glow',
       type: 'line',
       source: 'states',
       paint: {
-        'line-color': '#38bdf8',
+        'line-color': '#E7B75A',
         'line-width': [
           'interpolate',
           ['linear'],
           ['zoom'],
-          3, 1,
-          5, 2,
-          7, 3,
-          9, 4,
+          3, 0.75,
+          5, 1.25,
+          7, 2,
+          9, 2.5,
         ],
-        'line-opacity': 0.3,
-        'line-blur': 2,
+        'line-opacity': 0.25,
+        'line-blur': 1,
       },
     },
     // State labels with better styling
@@ -810,10 +810,10 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       type: 'circle',
       source: 'selected-location',
       paint: {
-        'circle-radius': 16,
+        'circle-radius': 14,
         'circle-color': '#ffffff',
-        'circle-stroke-color': '#0ea5e9',
-        'circle-stroke-width': 3,
+        'circle-stroke-color': '#E7B75A',
+        'circle-stroke-width': 2.5,
         'circle-opacity': 1,
       },
     },
@@ -831,7 +831,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       },
       paint: {
         'text-color': '#ffffff',
-        'text-halo-color': '#020617',
+        'text-halo-color': '#090909',
         'text-halo-width': 2,
       },
     },
@@ -846,8 +846,8 @@ export function createSelectedLocationLayer(): LayerSpecification {
     paint: {
       'circle-radius': 14,
       'circle-color': '#ffffff',
-      'circle-stroke-color': '#0ea5e9',
-      'circle-stroke-width': 3,
+      'circle-stroke-color': '#E7B75A',
+      'circle-stroke-width': 2.5,
       'circle-opacity': 1,
     },
   };
@@ -859,44 +859,52 @@ export function createSelectedLocationPulseLayer(): LayerSpecification {
     type: 'circle',
     source: 'selected-location',
     paint: {
-      'circle-radius': 24,
-      'circle-color': '#0ea5e9',
-      'circle-opacity': 0.4,
+      'circle-radius': 22,
+      'circle-color': '#E7B75A',
+      'circle-opacity': 0.35,
     },
   };
 }
 
 // Color utilities for weather
 export function getTemperatureColor(temp: number): string {
-  if (temp <= -10) return '#061d4e';
-  if (temp <= 0) return '#0d3b82';
-  if (temp <= 10) return '#145db8';
-  if (temp <= 20) return '#16a34a';
-  if (temp <= 25) return '#4ade80';
-  if (temp <= 30) return '#eab308';
-  if (temp <= 35) return '#f97316';
-  if (temp <= 40) return '#dc2626';
-  return '#7f1d1d';
+  if (temp <= -10) return '#3B5B82';
+  if (temp <= 0) return '#4E878C';
+  if (temp <= 10) return '#5C7C99';
+  if (temp <= 20) return '#4E9F8E';
+  if (temp <= 25) return '#C2A676';
+  if (temp <= 30) return '#E7B75A';
+  if (temp <= 35) return '#E07A5F';
+  if (temp <= 40) return '#D9534F';
+  return '#B83A35';
 }
 
 export function getPrecipitationColor(precip: number): string {
-  if (precip <= 0) return '#1e293b';
-  if (precip <= 2.5) return '#0ea5e9';
-  if (precip <= 10) return '#38bdf8';
-  if (precip <= 25) return '#22d3ee';
-  if (precip <= 50) return '#84cc16';
-  if (precip <= 75) return '#eab308';
-  if (precip <= 100) return '#f97316';
-  return '#ef4444';
+  if (precip <= 0) return '#1A232E';
+  if (precip <= 2.5) return '#2C3E50';
+  if (precip <= 10) return '#4A6572';
+  if (precip <= 25) return '#5C7C99';
+  if (precip <= 50) return '#7899B8';
+  if (precip <= 75) return '#E7B75A';
+  if (precip <= 100) return '#E07A5F';
+  return '#D9534F';
 }
 
 export function getAlertColor(severity: string): string {
-  switch (severity) {
-    case 'info': return '#0ea5e9';
-    case 'warning': return '#eab308';
-    case 'severe': return '#f97316';
-    case 'extreme': return '#ef4444';
-    default: return '#64748b';
+  switch (severity.toLowerCase()) {
+    case 'info':
+    case 'low':
+      return '#7899B8';
+    case 'warning':
+    case 'moderate':
+      return '#E7B75A';
+    case 'severe':
+    case 'high':
+      return '#E07A5F';
+    case 'extreme':
+      return '#D9534F';
+    default:
+      return '#737373';
   }
 }
 
@@ -960,7 +968,7 @@ export const MAP_STYLE_DARK = {
       id: 'background',
       type: 'background',
       paint: {
-        'background-color': '#020617',
+        'background-color': '#090909',
       },
     },
     {
@@ -994,7 +1002,7 @@ export const MAP_STYLE_SATELLITE = {
       id: 'background',
       type: 'background',
       paint: {
-        'background-color': '#020617',
+        'background-color': '#090909',
       },
     },
     {
@@ -1036,7 +1044,7 @@ export const MAP_STYLE_HYBRID = {
       id: 'background',
       type: 'background',
       paint: {
-        'background-color': '#020617',
+        'background-color': '#090909',
       },
     },
     {
@@ -1112,8 +1120,8 @@ export const SKY_LAYER: any = {
     'sky-type': 'atmosphere',
     'sky-atmosphere-sun': [0, 0],
     'sky-atmosphere-sun-intensity': 15,
-    'sky-atmosphere-halo-color': 'rgba(56, 189, 248, 0.3)',
-    'sky-atmosphere-color': 'rgba(7, 17, 31, 1)',
+    'sky-atmosphere-halo-color': 'rgba(231, 183, 90, 0.2)',
+    'sky-atmosphere-color': 'rgba(9, 9, 9, 1)',
   },
 };
 
@@ -1122,8 +1130,8 @@ export const FOG_LAYER: any = {
   id: 'fog',
   type: 'fog',
   paint: {
-    'fog-color': '#07111F',
-    'fog-high-color': '#0D1828',
+    'fog-color': '#090909',
+    'fog-high-color': '#101010',
     'fog-ground-blend': 0.25,
     'fog-end': 60000,
     'fog-start': 2000,
