@@ -16,7 +16,7 @@ export const INDIA_CITIES: City[] = [
   // TIER 1 CITIES (Metros)
   { name: 'Mumbai', state: 'Maharashtra', stateCode: 'MH', lat: 19.0760, lon: 72.8777, tier: 1, population: 12442373, isCapital: true },
   { name: 'Delhi', state: 'Delhi', stateCode: 'DL', lat: 28.7041, lon: 77.1025, tier: 1, population: 11034555, isCapital: true },
-  { name: 'Bangalore', state: 'Karnataka', stateCode: 'KA', lat: 12.9716, lon: 77.5946, tier: 1, population: 8443675, isCapital: true },
+  { name: 'Bengaluru', state: 'Karnataka', stateCode: 'KA', lat: 12.9716, lon: 77.5946, tier: 1, population: 8443675, isCapital: true },
   { name: 'Hyderabad', state: 'Telangana', stateCode: 'TS', lat: 17.3850, lon: 78.4867, tier: 1, population: 6993262, isCapital: true },
   { name: 'Chennai', state: 'Tamil Nadu', stateCode: 'TN', lat: 13.0827, lon: 80.2707, tier: 1, population: 4646732, isCapital: true },
   { name: 'Kolkata', state: 'West Bengal', stateCode: 'WB', lat: 22.5726, lon: 88.3639, tier: 1, population: 4496694, isCapital: true },

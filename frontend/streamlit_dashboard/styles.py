@@ -5,17 +5,17 @@ Premium dark-mode weather intelligence aesthetic.
 
 # ── Colour Palette ──────────────────────────────────────────────
 COLORS = {
-    "bg_primary": "#0B1120",
-    "bg_secondary": "#111827",
-    "bg_card": "#1E293B",
-    "bg_card_hover": "#253349",
-    "border": "#334155",
-    "border_accent": "#3B82F6",
-    "text_primary": "#F1F5F9",
-    "text_secondary": "#94A3B8",
-    "text_muted": "#64748B",
-    "accent_cyan": "#06B6D4",
-    "accent_blue": "#3B82F6",
+    "bg_primary": "#05070B",
+    "bg_secondary": "#0A0F18",
+    "bg_card": "#101722",
+    "bg_card_hover": "#162033",
+    "border": "#243248",
+    "border_accent": "#38BDF8",
+    "text_primary": "#F8FAFC",
+    "text_secondary": "#A7B4C7",
+    "text_muted": "#718096",
+    "accent_cyan": "#22D3EE",
+    "accent_blue": "#38BDF8",
     "accent_indigo": "#6366F1",
     "accent_amber": "#F59E0B",
     "accent_coral": "#F97316",
@@ -125,14 +125,17 @@ GLOBAL_CSS = f"""
 /* ── Base ─────────────────────────────── */
 html, body, [data-testid="stAppViewContainer"],
 [data-testid="stApp"] {{
-    background-color: var(--bg-primary) !important;
+    background:
+        radial-gradient(circle at 78% -15%, rgba(14,116,144,0.16), transparent 29rem),
+        radial-gradient(circle at -10% 35%, rgba(30,64,175,0.10), transparent 27rem),
+        var(--bg-primary) !important;
     color: var(--text-primary) !important;
     font-family: 'Inter', 'Segoe UI', sans-serif !important;
 }}
 
 /* ── Sidebar ──────────────────────────── */
 [data-testid="stSidebar"] {{
-    background: linear-gradient(180deg, {COLORS['bg_secondary']} 0%, {COLORS['bg_primary']} 100%) !important;
+    background: linear-gradient(180deg, #0B111B 0%, #06090F 100%) !important;
     border-right: 1px solid {COLORS['border']} !important;
 }}
 [data-testid="stSidebar"] .stMarkdown h1,
@@ -200,7 +203,7 @@ html, body, [data-testid="stAppViewContainer"],
 
 /* ── Metric cards ─────────────────────── */
 [data-testid="stMetric"] {{
-    background: {COLORS['bg_card']};
+    background: linear-gradient(145deg, rgba(22,32,51,0.96), rgba(12,18,29,0.96));
     border: 1px solid {COLORS['border']};
     border-radius: 12px;
     padding: 16px 20px;
@@ -316,7 +319,7 @@ hr {{
     border: 1px solid {COLORS['border']};
     border-radius: 14px;
     padding: 20px 24px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035), 0 12px 26px rgba(0,0,0,0.22);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     position: relative;
     overflow: hidden;
@@ -412,5 +415,18 @@ hr {{
     border-top: 1px solid {COLORS['border']};
     margin-top: 3rem;
 }}
+
+.command-header {{
+    position: relative; overflow: hidden; margin: 0 0 1.6rem; padding: 1.6rem 1.8rem;
+    border: 1px solid rgba(56,189,248,0.26); border-radius: 18px;
+    background: linear-gradient(110deg, rgba(13,23,38,0.96), rgba(9,14,23,0.88));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 36px rgba(0,0,0,0.25);
+}}
+.command-header::after {{ content:''; position:absolute; width:18rem; height:18rem; right:-7rem; top:-12rem; border-radius:50%; background:radial-gradient(circle, rgba(34,211,238,0.22), transparent 66%); }}
+.command-eyebrow {{ color:{COLORS['accent_cyan']}; font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }}
+.command-title {{ color:{COLORS['text_primary']}; font-size:2rem; line-height:1.1; font-weight:760; letter-spacing:-.035em; margin:.35rem 0 .45rem; }}
+.command-copy {{ color:{COLORS['text_secondary']}; font-size:.93rem; max-width:46rem; margin:0; }}
+.command-rail {{ display:flex; align-items:center; gap:.55rem; margin-top:1rem; color:{COLORS['text_muted']}; font-size:.76rem; font-family:'JetBrains Mono', monospace; }}
+.command-dot {{ width:.5rem; height:.5rem; border-radius:50%; background:{COLORS['accent_green']}; box-shadow:0 0 12px {COLORS['accent_green']}; }}
 </style>
 """

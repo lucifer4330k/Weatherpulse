@@ -18,6 +18,7 @@ export interface CurrentWeather {
   feels_like?: number;
   humidity: number;
   windSpeed: number;
+  windGust?: number;
   wind_speed?: number;
   windDirection: number;
   wind_direction?: number;

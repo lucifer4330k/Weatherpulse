@@ -110,7 +110,6 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
               {sourceIcon}
               <span>{sourceLabel}</span>
               <span className="text-neutral-700">•</span>
-              <span>Updated {formatRelativeTime(current.time.toString())}</span>
               {current.isDay !== undefined && current.isDay !== null && (
                 <>
                   <span className="text-neutral-700">•</span>
@@ -223,8 +222,8 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
           </div>
           <div className="text-center p-4 bg-neutral-800/50 rounded-xl">
             <p className="text-neutral-500 text-xs mb-1 uppercase tracking-wider">Gust</p>
-            <p className="text-white font-semibold text-xl tabular-nums">{(current as any).wind_gust ? `${(current as any).wind_gust} km/h` : 'N/A'}</p>
-            <p className="text-neutral-500 text-xs">Peak gust speed</p>
+            <p className="text-white font-semibold text-xl tabular-nums">{current.windGust == null ? 'N/A' : `${current.windGust} km/h`}</p>
+            <p className="text-neutral-500 text-xs">{current.windGust == null ? 'Not reported' : 'Peak gust speed'}</p>
           </div>
         </div>
       </div>

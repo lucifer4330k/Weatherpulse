@@ -30,6 +30,7 @@ class CurrentWeather(BaseModel):
     feels_like: float
     humidity: int
     wind_speed: float
+    wind_gust: Optional[float] = None
     wind_direction: int
     wind_direction_text: str
     precipitation: float

@@ -70,7 +70,7 @@ class OpenMeteoClient:
             # response contract and parser remain aligned.
             "current": (
                 "temperature_2m,relative_humidity_2m,apparent_temperature,"
-                "precipitation,weather_code,wind_speed_10m,wind_direction_10m,"
+                "precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,"
                 "surface_pressure,cloud_cover,is_day"
             ),
             "hourly": "visibility,uv_index",
@@ -94,7 +94,7 @@ class OpenMeteoClient:
 
         required = (
             "time", "temperature_2m", "relative_humidity_2m", "apparent_temperature",
-            "precipitation", "weather_code", "wind_speed_10m", "wind_direction_10m",
+            "precipitation", "weather_code", "wind_speed_10m", "wind_gusts_10m", "wind_direction_10m",
             "surface_pressure", "cloud_cover", "is_day",
         )
         missing = [field for field in required if cw.get(field) is None]
@@ -121,6 +121,7 @@ class OpenMeteoClient:
             feels_like=cw["apparent_temperature"],
             humidity=cw["relative_humidity_2m"],
             wind_speed=cw["wind_speed_10m"],
+            wind_gust=cw["wind_gusts_10m"],
             wind_direction=cw["wind_direction_10m"],
             wind_direction_text=self._get_wind_direction_text(cw["wind_direction_10m"]),
             precipitation=cw["precipitation"],

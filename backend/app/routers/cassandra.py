@@ -43,7 +43,7 @@ async def get_cassandra_latest(city: str = Query(..., description="City name")):
 
 @router.get("/latest/batch")
 async def get_cassandra_latest_batch(
-    cities: List[str] = Query(..., min_length=1, max_length=200),
+    cities: List[str] = Query(..., min_length=1, max_length=300),
 ):
     """Return latest rows for map markers in one browser request."""
     client = await get_cassandra_client()

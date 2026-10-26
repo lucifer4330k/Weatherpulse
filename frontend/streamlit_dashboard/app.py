@@ -152,6 +152,15 @@ def render_sidebar():
 # ── A. Overview ───────────────────────────────────────────────
 
 def page_overview():
+    st.markdown(
+        '<section class="command-header">'
+        '<div class="command-eyebrow">Weather operations · India</div>'
+        '<div class="command-title">Weather intelligence, without the noise.</div>'
+        '<p class="command-copy">Live conditions, spatial signals, and persisted streaming history in one operational view.</p>'
+        '<div class="command-rail"><span class="command-dot"></span> LIVE DATA SURFACE · OPEN-METEO / KAFKA / CASSANDRA</div>'
+        '</section>',
+        unsafe_allow_html=True,
+    )
     st.markdown("# 🌦️ WeatherPulse — India Weather Intelligence")
     st.markdown(f'<p style="color:{COLORS["text_secondary"]};margin-top:-0.5rem;font-size:0.95rem;">'
                 f'Real-time monitoring, spatial weather analytics, and historical insights.</p>',

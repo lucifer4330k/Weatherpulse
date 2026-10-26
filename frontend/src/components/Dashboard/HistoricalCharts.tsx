@@ -69,6 +69,18 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
     );
   }
 
+  if (filteredTempData.length === 0 && filteredPrecipData.length === 0) {
+    return (
+      <div className="glass-card p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
+          <BarChart2 className="w-8 h-8 text-neutral-500" />
+        </div>
+        <h3 className="text-neutral-400 font-medium">No readings in this period</h3>
+        <p className="text-neutral-500 text-sm mt-1">Choose a longer range or wait for the streaming pipeline to collect observations.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Period Selector */}

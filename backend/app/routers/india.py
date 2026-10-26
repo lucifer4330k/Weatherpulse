@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException
+import logging
 from typing import List, Optional
 from datetime import datetime
 from app.models.weather import (
@@ -8,6 +9,7 @@ from app.models.weather import (
 from app.services import get_open_meteo_client, get_cache_service
 
 router = APIRouter(prefix="/india", tags=["india"])
+logger = logging.getLogger(__name__)
 
 # State centers and codes for India
 INDIAN_STATES = [
