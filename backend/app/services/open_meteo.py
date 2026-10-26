@@ -65,9 +65,17 @@ class OpenMeteoClient:
         params = {
             "latitude": lat,
             "longitude": lon,
-            "current_weather": "true",
-            "hourly": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,surface_pressure,weather_code,cloud_cover,visibility,uv_index",
+            # `current_weather` is a legacy, limited response.  Request all of
+            # the current fields used by CurrentWeather explicitly so that the
+            # response contract and parser remain aligned.
+            "current": (
+                "temperature_2m,relative_humidity_2m,apparent_temperature,"
+                "precipitation,weather_code,wind_speed_10m,wind_direction_10m,"
+                "surface_pressure,cloud_cover,is_day,visibility,uv_index"
+            ),
             "timezone": "auto",
+            "wind_speed_unit": "kmh",
+            "precipitation_unit": "mm",
         }
         try:
             response = await self.client.get(f"{self.base_url}/forecast", params=params)
@@ -79,40 +87,38 @@ class OpenMeteoClient:
             raise
 
     def _parse_current_weather(self, data: Dict[str, Any]) -> CurrentWeather:
-        cw = data.get("current_weather", {})
-        hourly = data.get("hourly", {})
-        
-        # Find current hour index
-        current_time = cw.get("time", datetime.now().isoformat())
-        time_idx = 0
-        if "time" in hourly:
-            try:
-                time_idx = hourly["time"].index(current_time)
-            except ValueError:
-                time_idx = 0
+        cw = data.get("current")
+        if not isinstance(cw, dict):
+            raise ValueError("Open-Meteo response did not include a current-weather object")
 
-        weather_code = cw.get("weather_code", 0)
+        required = (
+            "time", "temperature_2m", "relative_humidity_2m", "apparent_temperature",
+            "precipitation", "weather_code", "wind_speed_10m", "wind_direction_10m",
+            "surface_pressure", "cloud_cover", "is_day", "visibility", "uv_index",
+        )
+        missing = [field for field in required if cw.get(field) is None]
+        if missing:
+            raise ValueError(f"Open-Meteo current-weather response is missing: {', '.join(missing)}")
+
+        current_time = cw["time"]
+        weather_code = cw["weather_code"]
         return CurrentWeather(
-            temperature=cw.get("temperature", 0),
-            feels_like=self._calculate_feels_like(
-                cw.get("temperature", 0),
-                hourly.get("relative_humidity_2m", [50])[time_idx] if time_idx < len(hourly.get("relative_humidity_2m", [])) else 50,
-                cw.get("wind_speed", 0)
-            ),
-            humidity=hourly.get("relative_humidity_2m", [50])[time_idx] if time_idx < len(hourly.get("relative_humidity_2m", [])) else 50,
-            wind_speed=cw.get("wind_speed", 0),
-            wind_direction=cw.get("wind_direction", 0),
-            wind_direction_text=self._get_wind_direction_text(cw.get("wind_direction", 0)),
-            precipitation=hourly.get("precipitation", [0])[time_idx] if time_idx < len(hourly.get("precipitation", [])) else 0,
-            pressure=hourly.get("surface_pressure", [1013])[time_idx] if time_idx < len(hourly.get("surface_pressure", [])) else 1013,
+            temperature=cw["temperature_2m"],
+            feels_like=cw["apparent_temperature"],
+            humidity=cw["relative_humidity_2m"],
+            wind_speed=cw["wind_speed_10m"],
+            wind_direction=cw["wind_direction_10m"],
+            wind_direction_text=self._get_wind_direction_text(cw["wind_direction_10m"]),
+            precipitation=cw["precipitation"],
+            pressure=cw["surface_pressure"],
             weather_code=weather_code,
             weather_description=self._get_weather_description(weather_code),
-            is_day=self._is_daytime(current_time),
+            is_day=bool(cw["is_day"]),
             time=datetime.fromisoformat(current_time.replace("Z", "+00:00")),
             source=WeatherSource.OPEN_METEO,
-            visibility=hourly.get("visibility", [10000])[time_idx] / 1000 if time_idx < len(hourly.get("visibility", [])) else 10,
-            cloud_cover=hourly.get("cloud_cover", [0])[time_idx] if time_idx < len(hourly.get("cloud_cover", [])) else 0,
-            uv_index=hourly.get("uv_index", [0])[time_idx] if time_idx < len(hourly.get("uv_index", [])) else 0,
+            visibility=cw["visibility"] / 1000,
+            cloud_cover=cw["cloud_cover"],
+            uv_index=cw["uv_index"],
         )
 
     # Forecast

@@ -258,8 +258,10 @@ services:
       - CASSANDRA_HOST=cassandra
       - CASSANDRA_KEYSPACE=spark_streams
       - CASSANDRA_TABLE=weather_data
+      - SPARK_CHECKPOINT_LOCATION=/opt/spark/checkpoints/weather_data
     volumes:
       - ./spark_stream.py:/opt/spark/spark_stream.py:ro
+      - spark_checkpoints:/opt/spark/checkpoints
     command: >
       /opt/spark/bin/spark-submit
       --master spark://spark-master:7077
@@ -332,3 +334,4 @@ volumes:
   postgres_data:
   cassandra_data:
   redis_data:
+  spark_checkpoints:

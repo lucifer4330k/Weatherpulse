@@ -125,12 +125,17 @@ export function TopNavbar({ currentStyle, onStyleChange, is3D, onToggle3D }: Top
         {/* Backend Live Health Status */}
         <div 
           className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#07111F]/80 border border-[#1E2E48] text-xs font-mono"
-          title={isHealthError ? 'FastAPI Backend Unreachable' : 'FastAPI Backend Connected'}
+          title={isHealthError ? 'FastAPI Backend Unreachable' : healthData?.status === 'healthy' ? 'FastAPI and dependencies are healthy' : 'FastAPI is reachable but one or more dependencies are degraded'}
         >
           {isHealthError ? (
             <>
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               <span className="text-rose-400 font-sans">API Offline</span>
+            </>
+          ) : healthData?.status !== 'healthy' ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-amber-300 font-sans">Backend Degraded</span>
             </>
           ) : (
             <>

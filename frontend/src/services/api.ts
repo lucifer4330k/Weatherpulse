@@ -23,6 +23,20 @@ class ApiError extends Error {
   }
 }
 
+/** Convert the FastAPI snake_case JSON contract once, at the API boundary. */
+function toCamelCase(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(toCamelCase);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, nested]) => [
+        key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()),
+        toCamelCase(nested),
+      ])
+    );
+  }
+  return value;
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
@@ -37,7 +51,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new ApiError(response.status, error.message || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  return toCamelCase(await response.json()) as T;
 }
 
 // Geocoding

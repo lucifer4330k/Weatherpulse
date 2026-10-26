@@ -558,20 +558,14 @@ export function MapContainer({
   const cityMarkers = useMemo(() => {
     const features: GeoJSON.Feature[] = [];
     
-    // Map of state code to state current weather
-    const stateWeatherMap: Record<string, any> = {};
-    if (indiaOverview?.states) {
-      indiaOverview.states.forEach((s) => {
-        if (s.code) stateWeatherMap[s.code] = s;
-      });
-    }
-
     INDIA_CITIES.forEach((city) => {
-      const stateData = stateWeatherMap[city.stateCode];
-      const temp = stateData?.current?.temperature ?? null;
-      const humidity = stateData?.current?.humidity ?? null;
-      const precipitation = stateData?.current?.precipitation ?? null;
-      const windSpeed = stateData?.current?.windSpeed ?? null;
+      // State overview readings are measured at state centres, not at every
+      // city in that state.  Keep city markers unmeasured until city-level
+      // data exists rather than presenting an estimate as a local reading.
+      const temp = null;
+      const humidity = null;
+      const precipitation = null;
+      const windSpeed = null;
 
       features.push({
         type: 'Feature',
@@ -592,33 +586,22 @@ export function MapContainer({
       });
     });
 
-    // Override with live data from India overview
+    // Represent state-overview data at the actual state centre.
     if (indiaOverview?.states) {
       indiaOverview.states.forEach((state: typeof indiaOverview.states[0]) => {
         if (state.current) {
-          const cityFeature = features.find(f => 
-            f.properties?.name === state.name && f.properties?.type?.includes('city')
-          );
-          if (cityFeature && cityFeature.properties) {
-            cityFeature.properties.temperature = state.current.temperature;
-            cityFeature.properties.humidity = state.current.humidity;
-            cityFeature.properties.windSpeed = state.current.windSpeed;
-            cityFeature.properties.precipitation = state.current.precipitation;
-            cityFeature.properties.type = 'state-capital-live';
-          } else {
-            features.push({
-              type: 'Feature',
-              geometry: { type: 'Point', coordinates: [state.center.lon, state.center.lat] },
-              properties: {
-                name: state.name,
-                temperature: state.current.temperature,
-                humidity: state.current.humidity,
-                windSpeed: state.current.windSpeed,
-                precipitation: state.current.precipitation,
-                type: 'state-capital-live',
-              },
-            });
-          }
+          features.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [state.center.lon, state.center.lat] },
+            properties: {
+              name: state.name,
+              temperature: state.current.temperature,
+              humidity: state.current.humidity,
+              windSpeed: state.current.windSpeed,
+              precipitation: state.current.precipitation,
+              type: 'state-centre-live',
+            },
+          });
         }
       });
     }

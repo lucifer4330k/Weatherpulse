@@ -273,7 +273,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
                           <p className="text-white text-xs font-medium group-hover:text-amber-300 transition-colors truncate">
                             {s.name}
                           </p>
-                          <p className="text-slate-500 text-[10px] uppercase font-mono">{s.current.weather_description}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-mono">{s.current.weatherDescription}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -309,7 +309,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
                           <p className="text-white text-xs font-medium group-hover:text-sky-300 transition-colors truncate">
                             {s.name}
                           </p>
-                          <p className="text-slate-500 text-[10px] uppercase font-mono">{s.current.weather_description}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-mono">{s.current.weatherDescription}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

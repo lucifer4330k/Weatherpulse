@@ -66,21 +66,22 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
     return weatherIcons.default;
   };
 
-  const sourceLabel = current.source === 'observed' ? 'Observed (Weather Station)' : 'Model Estimate (Open-Meteo)';
-  const sourceIcon = current.source === 'observed' ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Info className="w-4 h-4 text-blue-400" />;
+  const isStoredObservation = current.source === 'cassandra';
+  const sourceLabel = isStoredObservation ? 'Stored Stream Observation' : 'Open-Meteo Weather Model';
+  const sourceIcon = isStoredObservation ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Info className="w-4 h-4 text-blue-400" />;
 
-  const feelsLike = current.feels_like ?? current.feelsLike ?? current.temperature;
-  const windSpeed = current.wind_speed ?? current.windSpeed ?? 0;
-  const windDirection = current.wind_direction ?? current.windDirection ?? 0;
-  const windDirectionText = current.wind_direction_text ?? current.windDirectionText ?? getWindDirectionText(windDirection);
-  const weatherDescription = current.weather_description ?? current.weatherDescription ?? 'Fair';
-  const weatherCode = current.weather_code ?? current.weatherCode ?? 0;
-  const visibility = current.visibility ?? (current as any).visibility ?? 10;
-  const cloudCover = current.cloud_cover ?? current.cloudCover ?? 0;
-  const uvIndex = current.uv_index ?? current.uvIndex ?? 0;
-  const precipitation = current.precipitation ?? 0;
-  const pressure = current.pressure ?? 1013;
-  const humidity = current.humidity ?? 50;
+  const feelsLike = current.feelsLike;
+  const windSpeed = current.windSpeed;
+  const windDirection = current.windDirection;
+  const windDirectionText = current.windDirectionText || getWindDirectionText(windDirection);
+  const weatherDescription = current.weatherDescription;
+  const weatherCode = current.weatherCode;
+  const visibility = current.visibility ?? 10;
+  const cloudCover = current.cloudCover ?? 0;
+  const uvIndex = current.uvIndex ?? 0;
+  const precipitation = current.precipitation;
+  const pressure = current.pressure;
+  const humidity = current.humidity;
 
   const uvInfo = getUVIndexDescription(uvIndex);
   const windInfo = getWindSpeedDescription(windSpeed);
@@ -110,19 +111,19 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
               <span>{sourceLabel}</span>
               <span className="text-neutral-700">•</span>
               <span>Updated {formatRelativeTime(current.time.toString())}</span>
-              {current.is_day !== undefined && current.is_day !== null && (
+              {current.isDay !== undefined && current.isDay !== null && (
                 <>
                   <span className="text-neutral-700">•</span>
                   <span className="flex items-center gap-1">
-                    {current.is_day ? <SunIcon className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-blue-300" />}
-                    {current.is_day ? 'Daytime' : 'Nighttime'}
+                    {current.isDay ? <SunIcon className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-blue-300" />}
+                    {current.isDay ? 'Daytime' : 'Nighttime'}
                   </span>
                 </>
               )}
             </div>
           </div>
           <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500/30 to-primary-400/10 flex items-center justify-center backdrop-blur-sm border border-primary-500/20">
-            {getWeatherIcon(weatherCode, current.is_day ?? true)}
+            {getWeatherIcon(weatherCode, current.isDay)}
           </div>
         </div>
 
@@ -279,8 +280,8 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
                 <span className="text-xs text-white font-medium tabular-nums">
                   {hour.precipitation > 0 ? `${hour.precipitation.toFixed(1)}mm` : '—'}
                 </span>
-                {hour.precipitation_probability && hour.precipitation_probability > 0 && (
-                  <span className="text-xs text-blue-400 font-medium">{hour.precipitation_probability}%</span>
+                {hour.precipitationProbability > 0 && (
+                  <span className="text-xs text-blue-400 font-medium">{hour.precipitationProbability}%</span>
                 )}
               </div>
             ))}
@@ -293,7 +294,7 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-2 text-neutral-500">
             <Info className="w-4 h-4" />
-            <span>Data source: {current.source === 'observed' ? 'Weather Station' : 'Open-Meteo Model'}</span>
+            <span>Data source: {current.source === 'cassandra' ? 'Stored Stream Observation' : 'Open-Meteo Model'}</span>
           </div>
           <div className="flex items-center gap-3 text-neutral-500 font-mono tabular-nums text-xs">
             <span>Lat: {current.latitude?.toFixed(4) ?? 'N/A'}</span>

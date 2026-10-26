@@ -21,22 +21,24 @@ async def health_check():
     except Exception as e:
         services["open_meteo"] = f"unhealthy: {str(e)}"
     
-    # Check Cassandra - just report status without blocking on connection
+    # Verify a real Cassandra round trip; object construction alone is not a
+    # dependency health check.
     try:
-        # Use cached client if available
-        from app.services.cassandra_client import _cassandra_client
-        if _cassandra_client is not None:
-            services["cassandra"] = "healthy"
-        else:
-            services["cassandra"] = "not_initialized"
+        cassandra = await asyncio.wait_for(get_cassandra_client(), timeout=5.0)
+        await asyncio.wait_for(asyncio.to_thread(cassandra.session.execute, "SELECT release_version FROM system.local"), timeout=5.0)
+        services["cassandra"] = "healthy"
     except Exception as e:
         services["cassandra"] = f"unhealthy: {str(e)}"
     
-    # Check Cache - just report status without blocking on connection
+    # Redis may intentionally fall back to local cache, but a configured Redis
+    # connection is only healthy after it responds to PING.
     try:
-        from app.services.cache import _cache_service
-        if _cache_service is not None:
+        cache = await asyncio.wait_for(get_cache_service(), timeout=5.0)
+        if cache.use_redis and cache.redis_client:
+            await asyncio.wait_for(cache.redis_client.ping(), timeout=5.0)
             services["cache"] = "healthy"
+        elif cache.local_cache is not None:
+            services["cache"] = "degraded: local fallback"
         else:
             services["cache"] = "not_initialized"
     except Exception as e:
@@ -53,7 +55,11 @@ async def health_check():
 
 @router.get("/ready")
 async def readiness_check():
-    """Readiness check for Kubernetes - instant response"""
+    """Return ready only when mandatory serving dependencies are available."""
+    health = await health_check()
+    if health.status != "healthy":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail={"status": "not_ready", "services": health.services})
     return {"status": "ready"}
 
 @router.get("/live")

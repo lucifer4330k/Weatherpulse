@@ -32,7 +32,7 @@ export interface CurrentWeather {
   isDay: boolean;
   is_day?: boolean;
   time: string; // ISO timestamp
-  source: 'model' | 'observed';
+  source: 'open-meteo' | 'cassandra' | 'mixed';
   visibility?: number;
   cloudCover?: number;
   cloud_cover?: number;

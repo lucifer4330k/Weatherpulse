@@ -52,7 +52,6 @@ def create_table(session):
 
 
 def create_spark_connection():
-    s_conn = None
     try:
         s_conn = (
             SparkSession.builder.appName("SparkDataStreaming")
@@ -67,13 +66,12 @@ def create_spark_connection():
         s_conn.sparkContext.setLogLevel("WARN")
         logging.info("Spark connection created successfully!")
     except Exception as e:
-        logging.error(f"Couldn't create the spark session due to exception {e}")
-
+        logging.exception("Couldn't create the Spark session")
+        raise RuntimeError("Spark session initialization failed") from e
     return s_conn
 
 
 def connect_to_kafka(spark_conn):
-    spark_df = None
     try:
         spark_df = (
             spark_conn.readStream.format("kafka")
@@ -85,8 +83,8 @@ def connect_to_kafka(spark_conn):
         spark_df.printSchema()
         logging.info("Kafka DataFrame created successfully")
     except Exception as e:
-        logging.warning(f"Kafka DataFrame could not be created because: {e}")
-
+        logging.exception("Kafka DataFrame could not be created")
+        raise RuntimeError("Kafka source initialization failed") from e
     return spark_df
 
 
@@ -97,8 +95,8 @@ def create_cassandra_connection():
         cas_session = cluster.connect()
         return cas_session
     except Exception as e:
-        logging.warning(f"Could not create direct Python Cassandra connection: {e}")
-        return None
+        logging.exception("Could not create direct Python Cassandra connection")
+        raise RuntimeError("Cassandra initialization failed") from e
 
 
 def create_selection_df_from_kafka(spark_df):
@@ -150,43 +148,52 @@ def create_selection_df_from_kafka(spark_df):
         col("data.weather_condition"),
     )
 
-    return flattened_df
+    # `from_json` produces null columns for malformed payloads.  Drop those
+    # records before the Cassandra sink so invalid primary keys do not stop a
+    # micro-batch and make the stream appear healthy while writing nothing.
+    return flattened_df.filter(
+        "station_id IS NOT NULL AND timestamp IS NOT NULL AND city IS NOT NULL "
+        "AND country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL "
+        "AND temperature IS NOT NULL AND humidity IS NOT NULL AND pressure IS NOT NULL "
+        "AND wind_speed IS NOT NULL AND wind_direction IS NOT NULL "
+        "AND precipitation IS NOT NULL AND weather_condition IS NOT NULL"
+    )
 
 
 def start_spark_stream():
     # Create Cassandra keyspace and table if direct client is available
     session = create_cassandra_connection()
-    if session is not None:
-        try:
-            create_keyspace(session)
-            create_table(session)
-            session.shutdown()
-        except Exception as e:
-            logging.warning(f"Could not initialize Cassandra schema: {e}")
+    try:
+        create_keyspace(session)
+        create_table(session)
+    except Exception as e:
+        logging.exception("Could not initialize Cassandra schema")
+        raise
+    finally:
+        session.shutdown()
 
     # Create spark connection
     spark_conn = create_spark_connection()
 
-    if spark_conn is not None:
-        # Connect to Kafka with spark connection
-        spark_df = connect_to_kafka(spark_conn)
-        if spark_df is not None:
-            selection_df = create_selection_df_from_kafka(spark_df)
+    # Connect to Kafka with spark connection
+    spark_df = connect_to_kafka(spark_conn)
+    selection_df = create_selection_df_from_kafka(spark_df)
 
-            print("Streaming is being started...")
+    print("Streaming is being started...")
 
-            try:
-                streaming_query = (
-                    selection_df.writeStream.format("org.apache.spark.sql.cassandra")
-                    .option("checkpointLocation", "/tmp/checkpoint")
-                    .option("keyspace", CASSANDRA_KEYSPACE)
-                    .option("table", CASSANDRA_TABLE)
-                    .start()
-                )
-                logging.info("Streaming query started successfully!")
-                streaming_query.awaitTermination()
-            except Exception as e:
-                logging.error(f"Streaming query failed due to: {e}")
+    try:
+        streaming_query = (
+            selection_df.writeStream.format("org.apache.spark.sql.cassandra")
+            .option("checkpointLocation", os.getenv("SPARK_CHECKPOINT_LOCATION", "/opt/spark/checkpoints/weather_data"))
+            .option("keyspace", CASSANDRA_KEYSPACE)
+            .option("table", CASSANDRA_TABLE)
+            .start()
+        )
+        logging.info("Streaming query started successfully!")
+        streaming_query.awaitTermination()
+    except Exception as e:
+        logging.exception("Streaming query failed")
+        raise
 
 
 if __name__ == "__main__":
