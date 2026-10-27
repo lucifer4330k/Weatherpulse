@@ -95,11 +95,11 @@ class WeatherAlert(BaseModel):
 
 class HistoricalDataPoint(BaseModel):
     timestamp: datetime
-    temperature: float
-    humidity: int
-    pressure: float
-    wind_speed: float
-    precipitation: float
+    temperature: Optional[float] = None
+    humidity: Optional[int] = None
+    pressure: Optional[float] = None
+    wind_speed: Optional[float] = None
+    precipitation: Optional[float] = None
     source: WeatherSource
 
 class WeatherTrends(BaseModel):
@@ -153,6 +153,7 @@ class GeocodeResponse(BaseModel):
 class StateWeatherSummary(BaseModel):
     code: str
     name: str
+    sampled_city: Optional[str] = None
     center: Coordinates
     bounds: dict
     current: Optional[CurrentWeather] = None

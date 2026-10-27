@@ -1,12 +1,18 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, HTTPException
 import logging
-from typing import List, Optional
-from datetime import datetime
+from typing import List
+from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
+import json
 from app.models.weather import (
     IndiaOverviewResponse, StateWeatherSummary, DistrictWeatherSummary,
     CurrentWeather, Coordinates, WeatherSource
 )
-from app.services import get_open_meteo_client, get_cache_service
+from app.services import get_cache_service
+from app.services import get_cassandra_client
+from app.services.open_meteo import OpenMeteoClient
+from app.locations import monitored_locations
 
 router = APIRouter(prefix="/india", tags=["india"])
 logger = logging.getLogger(__name__)
@@ -20,8 +26,7 @@ INDIAN_STATES = [
     {"code": "BR", "name": "Bihar", "center": {"lat": 25.0961, "lon": 85.3131}},
     {"code": "CH", "name": "Chandigarh", "center": {"lat": 30.7333, "lon": 76.7794}},
     {"code": "CT", "name": "Chhattisgarh", "center": {"lat": 21.2787, "lon": 81.8661}},
-    {"code": "DN", "name": "Dadra and Nagar Haveli", "center": {"lat": 20.3974, "lon": 72.8328}},
-    {"code": "DD", "name": "Daman and Diu", "center": {"lat": 20.7602, "lon": 70.9765}},
+    {"code": "DH", "name": "Dadra and Nagar Haveli and Daman and Diu", "center": {"lat": 20.3974, "lon": 72.8328}},
     {"code": "DL", "name": "Delhi", "center": {"lat": 28.7041, "lon": 77.1025}},
     {"code": "GA", "name": "Goa", "center": {"lat": 15.2993, "lon": 74.1240}},
     {"code": "GJ", "name": "Gujarat", "center": {"lat": 22.2587, "lon": 71.1924}},
@@ -93,14 +98,47 @@ STATE_BOUNDS = {
     "WB": {"minLat": 21.5, "maxLat": 27.2, "minLon": 85.8, "maxLon": 89.8},
 }
 
-async def fetch_state_weather(state: dict) -> StateWeatherSummary:
-    """Fetch current weather for a state's center point"""
-    client = await get_open_meteo_client()
-    try:
-        current = await client.get_current_weather(state["center"]["lat"], state["center"]["lon"])
-        
+
+@lru_cache(maxsize=1)
+def district_features() -> list[dict]:
+    boundary_path = Path(__file__).resolve().parents[2] / "india-districts.geojson"
+    if not boundary_path.exists():
+        logger.warning("District boundary file is unavailable: %s", boundary_path)
+        return []
+    with boundary_path.open(encoding="utf-8") as boundary_file:
+        return json.load(boundary_file).get("features", [])
+
+def stored_current(record: dict) -> CurrentWeather | None:
+    """Expose only complete stored observations through the current-weather contract."""
+    required = ("temperature", "feels_like", "humidity", "wind_speed", "wind_direction_degrees",
+                "precipitation", "pressure", "weather_code", "is_day", "source_timestamp")
+    if not record or any(record.get(field) is None for field in required):
+        return None
+    code = int(record["weather_code"])
+    return CurrentWeather(
+        temperature=record["temperature"], feels_like=record["feels_like"],
+        humidity=record["humidity"], wind_speed=record["wind_speed"],
+        wind_gust=record.get("wind_gust"), wind_direction=record["wind_direction_degrees"],
+        wind_direction_text=record.get("wind_direction") or "Unknown",
+        precipitation=record["precipitation"], pressure=record["pressure"],
+        weather_code=code, weather_description=OpenMeteoClient.weather_description(code),
+        is_day=record["is_day"], time=datetime.fromisoformat(record["source_timestamp"].replace("Z", "+00:00")),
+        source=WeatherSource.CASSANDRA, cloud_cover=record.get("cloud_cover"),
+    )
+
+
+async def fetch_state_weather(state: dict, observations: dict | None = None) -> StateWeatherSummary:
+    """Represent only configured sampled locations as state context."""
+    location = next((item for item in monitored_locations()
+                     if item["state_code"] == state["code"] and item.get("primary")), None)
+    if observations is None:
+        client = await get_cassandra_client()
+        observations = await client.get_latest_for_cities([location["city"]] if location else [])
+    record = observations.get(location["city"]) if location else None
+    current = stored_current(record) if record else None
+    alert_level = "none"
+    if current is not None:
         # Determine alert level based on current conditions
-        alert_level = "none"
         if current.temperature >= 45 or current.precipitation >= 100:
             alert_level = "extreme"
         elif current.temperature >= 40 or current.precipitation >= 50 or current.wind_speed >= 90:
@@ -110,26 +148,17 @@ async def fetch_state_weather(state: dict) -> StateWeatherSummary:
         elif current.temperature >= 30 or current.precipitation >= 10 or current.wind_speed >= 30:
             alert_level = "low"
         
-        return StateWeatherSummary(
-            code=state["code"],
-            name=state["name"],
-            center=Coordinates(**state["center"]),
-            bounds=STATE_BOUNDS.get(state["code"], {}),
-            current=current,
-            alert_level=alert_level,
-            district_count=0,  # Would need district data
-        )
-    except Exception as e:
-        # Return state without weather data on error
-        return StateWeatherSummary(
-            code=state["code"],
-            name=state["name"],
-            center=Coordinates(**state["center"]),
-            bounds=STATE_BOUNDS.get(state["code"], {}),
-            current=None,
-            alert_level="none",
-            district_count=0,
-        )
+    return StateWeatherSummary(
+        code=state["code"],
+        name=state["name"],
+        sampled_city=location["city"] if location else None,
+        center=Coordinates(lat=location["latitude"], lon=location["longitude"]) if location and current else Coordinates(**state["center"]),
+        bounds=STATE_BOUNDS.get(state["code"], {}),
+        current=current,
+        alert_level=alert_level,
+        district_count=sum(1 for feature in district_features()
+                           if feature.get("properties", {}).get("state_code") == state["code"]),
+    )
 
 @router.get("/overview", response_model=IndiaOverviewResponse)
 async def get_india_overview():
@@ -143,31 +172,36 @@ async def get_india_overview():
         # cache hit is not a new weather observation.
         return IndiaOverviewResponse(**cached)
     
-    # Fetch weather for all states in parallel
-    import asyncio
-    state_weathers = await asyncio.gather(*[
-        fetch_state_weather(state) for state in INDIAN_STATES
-    ])
+    client = await get_cassandra_client()
+    observations = await client.get_latest_for_cities([item["city"] for item in monitored_locations()])
+    state_weathers = [await fetch_state_weather(state, observations) for state in INDIAN_STATES]
     
-    # Calculate national averages
+    # Every reporting city contributes once to sampled national statistics.
+    # The state cards separately show one explicitly chosen representative.
     valid_states = [s for s in state_weathers if s.current is not None]
-    avg_temp = sum(s.current.temperature for s in valid_states) / len(valid_states) if valid_states else 0
-    avg_humidity = sum(s.current.humidity for s in valid_states) / len(valid_states) if valid_states else 0
-    total_precip = sum(s.current.precipitation for s in valid_states)
+    valid_locations = [current for record in observations.values()
+                       if (current := stored_current(record)) is not None]
+    avg_temp = sum(item.temperature for item in valid_locations) / len(valid_locations) if valid_locations else None
+    avg_humidity = sum(item.humidity for item in valid_locations) / len(valid_locations) if valid_locations else None
+    avg_precip = sum(item.precipitation for item in valid_locations) / len(valid_locations) if valid_locations else None
     alert_count = sum(1 for s in state_weathers if s.alert_level != "none")
     
     overview = IndiaOverviewResponse(
         states=state_weathers,
         national={
-            "avg_temperature": round(avg_temp, 1),
-            "avg_humidity": round(avg_humidity, 1),
-            "total_precipitation": round(total_precip, 1),
+            "avg_temperature": round(avg_temp, 1) if avg_temp is not None else None,
+            "avg_humidity": round(avg_humidity, 1) if avg_humidity is not None else None,
+            "mean_sampled_precipitation": round(avg_precip, 1) if avg_precip is not None else None,
             "alert_count": alert_count,
+            "monitored_locations": len(monitored_locations()),
+            "reporting_locations": len(valid_locations),
+            "reporting_states": len(valid_states),
+            "coverage_label": "Configured city samples; not an area-weighted national estimate",
         },
-        timestamp=datetime.now(),
+        timestamp=max((item.time for item in valid_locations), default=datetime.now(timezone.utc)),
     )
     
-    await cache.set(cache_key, overview.model_dump(), 300)  # 5 min cache
+    await cache.set(cache_key, overview.model_dump(), 60)
     return overview
 
 @router.get("/state/{state_code}", response_model=StateWeatherSummary)
@@ -188,87 +222,28 @@ async def get_state_districts(state_code: str):
     if not state:
         raise HTTPException(status_code=404, detail=f"State {state_code} not found")
     
-    # Load district data from GeoJSON
-    import json
-    import os
-    # Compose mounts the same vetted boundary file used by the frontend at
-    # this path. This avoids relying on a directory outside the backend image.
-    district_geojson_path = os.path.join(os.path.dirname(__file__), "..", "..", "india-districts.geojson")
-    
-    if not os.path.exists(district_geojson_path):
-        # Return empty list if district data not available
-        return []
-    
-    with open(district_geojson_path, 'r') as f:
-        district_data = json.load(f)
-    
-    # Filter districts for this state
-    state_districts = [
-        d for d in district_data.get("features", []) 
-        if d.get("properties", {}).get("state_code") == state_code
-    ]
-    
-    if not state_districts:
-        return []
-    
-    # Fetch weather for each district
-    client = await get_open_meteo_client()
-    district_summaries = []
-    
-    for district in state_districts:
-        props = district.get("properties", {})
-        geometry = district.get("geometry", {})
-        
-        if not geometry or geometry.get("type") != "Polygon":
+    districts = [feature for feature in district_features()
+                 if feature.get("properties", {}).get("state_code") == state_code]
+    locations = [item for item in monitored_locations() if item["state_code"] == state_code]
+    client = await get_cassandra_client()
+    observations = await client.get_latest_for_cities([item["city"] for item in locations])
+    by_district = {item["district"].casefold(): item for item in locations if item.get("district")}
+
+    summaries = []
+    for feature in districts:
+        props = feature["properties"]
+        location = by_district.get(props["name"].casefold())
+        record = observations.get(location["city"]) if location else None
+        current = stored_current(record) if record else None
+        center = props.get("center")
+        if not center:
             continue
-            
-        # Calculate district center from polygon bounds
-        coords = geometry.get("coordinates", [[]])[0]
-        if not coords:
-            continue
-            
-        lons = [c[0] for c in coords]
-        lats = [c[1] for c in coords]
-        center_lon = sum(lons) / len(lons)
-        center_lat = sum(lats) / len(lats)
-        
-        try:
-            current = await client.get_current_weather(center_lat, center_lon)
-            
-            # Determine alert level
-            alert_level = "none"
-            if current.temperature >= 45 or current.precipitation >= 100:
-                alert_level = "extreme"
-            elif current.temperature >= 40 or current.precipitation >= 50 or current.wind_speed >= 90:
-                alert_level = "high"
-            elif current.temperature >= 35 or current.precipitation >= 25 or current.wind_speed >= 60:
-                alert_level = "moderate"
-            elif current.temperature >= 30 or current.precipitation >= 10 or current.wind_speed >= 30:
-                alert_level = "low"
-            
-            district_summaries.append(DistrictWeatherSummary(
-                code=props.get("code", ""),
-                name=props.get("name", ""),
-                state_code=state_code,
-                center=Coordinates(lat=center_lat, lon=center_lon),
-                bounds={},  # Could compute from geometry
-                current=current,
-                alert_level=alert_level,
-            ))
-        except Exception as e:
-            logger.warning(f"Failed to fetch weather for district {props.get('name', 'unknown')}: {e}")
-            # Add district without weather data
-            district_summaries.append(DistrictWeatherSummary(
-                code=props.get("code", ""),
-                name=props.get("name", ""),
-                state_code=state_code,
-                center=Coordinates(lat=center_lat, lon=center_lon),
-                bounds={},
-                current=None,
-                alert_level="none",
-            ))
-    
-    return district_summaries
+        summaries.append(DistrictWeatherSummary(
+            code=props["code"], name=props["name"], state_code=state_code,
+            center=Coordinates(**center), bounds={}, current=current,
+            alert_level="none",
+        ))
+    return summaries
 
 @router.get("/states", response_model=List[dict])
 async def list_states():

@@ -3,8 +3,12 @@ services:
     image: confluentinc/cp-zookeeper:7.4.0
     hostname: zookeeper
     container_name: zookeeper
+    restart: unless-stopped
     ports:
       - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -20,12 +24,16 @@ services:
     image: confluentinc/cp-server:7.4.0
     hostname: broker
     container_name: broker
+    restart: unless-stopped
+    stop_grace_period: 60s
     depends_on:
       zookeeper:
         condition: service_healthy
     ports:
       - "9092:9092"
       - "9101:9101"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
@@ -41,20 +49,48 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: localhost
-      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
       CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "broker:29092"
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
       CONFLUENT_METRICS_ENABLE: "false"
       CONFLUENT_SUPPORT_CUSTOMER_ID: "anonymous"
     healthcheck:
-      test: ["CMD", "bash", "-c", "nc -z localhost 9092"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:29092 --list >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 15s
+      retries: 8
+      start_period: 120s
     networks:
       - confluent
 
+  kafka-init:
+    image: confluentinc/cp-server:7.4.0
+    depends_on:
+      broker:
+        condition: service_started
+    entrypoint: ["/bin/bash", "/opt/kafka/init-topic.sh"]
+    command: ["weather_data_real", "3"]
+    volumes:
+      - ./scripts/init_kafka_topic.sh:/opt/kafka/init-topic.sh:ro
+    networks:
+      - confluent
+    restart: "no"
+
+  kafka-synthetic-init:
+    profiles: [synthetic]
+    image: confluentinc/cp-server:7.4.0
+    depends_on:
+      broker:
+        condition: service_started
+    entrypoint: ["/bin/bash", "/opt/kafka/init-topic.sh"]
+    command: ["weather_data_synthetic", "3"]
+    volumes:
+      - ./scripts/init_kafka_topic.sh:/opt/kafka/init-topic.sh:ro
+    networks:
+      - confluent
+    restart: "no"
+
   schema-registry:
+    profiles: [observability]
     image: confluentinc/cp-schema-registry:7.4.0
     hostname: schema-registry
     container_name: schema-registry
@@ -76,6 +112,7 @@ services:
       - confluent
 
   control-center:
+    profiles: [observability]
     image: confluentinc/cp-enterprise-control-center:7.4.0
     hostname: control-center
     container_name: control-center
@@ -125,7 +162,10 @@ services:
       - confluent
 
   webserver:
-    image: apache/airflow:2.7.0-python3.9
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    image: weatherpulse-airflow:2.7.0
     container_name: airflow-webserver
     entrypoint: ["/bin/bash", "/opt/airflow/script/entrypoint.sh"]
     depends_on:
@@ -138,10 +178,11 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres:5432/airflow"
       AIRFLOW__WEBSERVER__SECRET_KEY: "change-this-development-secret-key"
+      WEATHER_LOCATIONS_FILE: /opt/airflow/locations.json
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./backend/app/data/locations.json:/opt/airflow/locations.json:ro
       - ./script/entrypoint.sh:/opt/airflow/script/entrypoint.sh:ro
-      - ./requirements.txt:/opt/airflow/requirements.txt:ro
     ports:
       - "8080:8080"
     healthcheck:
@@ -161,7 +202,7 @@ services:
       - confluent
 
   scheduler:
-    image: apache/airflow:2.7.0-python3.9
+    image: weatherpulse-airflow:2.7.0
     container_name: airflow-scheduler
     entrypoint: ["/bin/bash", "/opt/airflow/script/scheduler-entrypoint.sh"]
     depends_on:
@@ -169,8 +210,8 @@ services:
         condition: service_healthy
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./backend/app/data/locations.json:/opt/airflow/locations.json:ro
       - ./script/scheduler-entrypoint.sh:/opt/airflow/script/scheduler-entrypoint.sh:ro
-      - ./requirements.txt:/opt/airflow/requirements.txt:ro
     environment:
       LOAD_EX: "n"
       EXECUTOR: Sequential
@@ -178,6 +219,7 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres:5432/airflow"
       AIRFLOW__WEBSERVER__SECRET_KEY: "change-this-development-secret-key"
+      WEATHER_LOCATIONS_FILE: /opt/airflow/locations.json
     logging:
       options:
         max-size: 10m
@@ -186,6 +228,7 @@ services:
       - confluent
 
   spark-master:
+    profiles: [cluster]
     image: apache/spark:3.4.1-python3
     hostname: spark-master
     container_name: spark-master
@@ -197,6 +240,7 @@ services:
       - confluent
 
   spark-worker:
+    profiles: [cluster]
     image: apache/spark:3.4.1-python3
     hostname: spark-worker
     container_name: spark-worker
@@ -251,12 +295,8 @@ services:
     hostname: spark-streaming
     container_name: spark-streaming
     depends_on:
-      spark-master:
-        condition: service_started
-      spark-worker:
-        condition: service_started
-      broker:
-        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       cassandra_db:
         condition: service_healthy
     environment:
@@ -265,19 +305,72 @@ services:
       - CASSANDRA_KEYSPACE=spark_streams
       - CASSANDRA_TABLE=weather_data_real
       - KAFKA_TOPIC=weather_data_real
-      - SPARK_CHECKPOINT_LOCATION=/opt/spark/checkpoints/weather_data_real_v2
+      - WEATHER_SOURCE=open-meteo
+      - SPARK_CHECKPOINT_LOCATION=/opt/spark/checkpoints/weather_data_real_v3
     volumes:
       - ./spark_stream.py:/opt/spark/spark_stream.py:ro
+      - ./backend/app/schema.py:/opt/spark/weather_schema.py:ro
       - spark_checkpoints:/opt/spark/checkpoints
     command: >
       /opt/spark/bin/spark-submit
-      --master spark://spark-master:7077
+      --master ${SPARK_MASTER:-local[2]}
+      --driver-memory 1g
       --conf spark.jars.ivy=/tmp/.ivy2
       --packages com.datastax.spark:spark-cassandra-connector_2.12:3.4.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1
       /opt/spark/spark_stream.py
     networks:
       - confluent
     restart: on-failure
+
+  spark-synthetic:
+    profiles: [synthetic]
+    image: weatherpulse-spark-streaming
+    depends_on:
+      kafka-synthetic-init:
+        condition: service_completed_successfully
+      cassandra_db:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      KAFKA_TOPIC: weather_data_synthetic
+      WEATHER_SOURCE: synthetic
+      CASSANDRA_HOST: cassandra
+      CASSANDRA_KEYSPACE: spark_streams
+      CASSANDRA_TABLE: weather_data_synthetic
+      SPARK_CHECKPOINT_LOCATION: /opt/spark/checkpoints/weather_data_synthetic_v2
+    volumes:
+      - ./spark_stream.py:/opt/spark/spark_stream.py:ro
+      - ./backend/app/schema.py:/opt/spark/weather_schema.py:ro
+      - spark_checkpoints:/opt/spark/checkpoints
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[1]
+      --driver-memory 1g
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages com.datastax.spark:spark-cassandra-connector_2.12:3.4.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1
+      /opt/spark/spark_stream.py
+    networks:
+      - confluent
+    restart: on-failure
+
+  synthetic-producer:
+    profiles: [synthetic]
+    image: weatherpulse-airflow:2.7.0
+    depends_on:
+      kafka-synthetic-init:
+        condition: service_completed_successfully
+    entrypoint: ["python", "/opt/airflow/scripts/synthetic_weather.py"]
+    command: ["--publish", "--per-location", "10", "--seed", "42"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      WEATHER_LOCATIONS_FILE: /opt/airflow/locations.json
+    volumes:
+      - ./scripts/synthetic_weather.py:/opt/airflow/scripts/synthetic_weather.py:ro
+      - ./dags/weather_ingest.py:/opt/airflow/dags/weather_ingest.py:ro
+      - ./backend/app/data/locations.json:/opt/airflow/locations.json:ro
+    networks:
+      - confluent
+    restart: "no"
 
   # Backend API
   backend:
@@ -336,11 +429,31 @@ services:
       - confluent
     restart: unless-stopped
 
+  streamlit:
+    profiles: [analytics]
+    build:
+      context: ./frontend/streamlit_dashboard
+    image: weatherpulse-streamlit:1.40.2
+    ports:
+      - "8501:8501"
+    environment:
+      STREAMLIT_BACKEND_URL: http://backend:8000
+      STREAMLIT_CACHE_TTL: 60
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - confluent
+    restart: unless-stopped
+
 networks:
   confluent:
     driver: bridge
 
 volumes:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
   postgres_data:
   cassandra_data:
   redis_data:

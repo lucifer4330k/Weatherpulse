@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
+import logging
+from app.locations import location_for_city
+from app.routers.india import stored_current
 from app.models.weather import (
     CurrentWeather, HourlyForecast, DailyForecast, WeatherAlert,
     WeatherDashboardData, WeatherTrends, WeatherSource
@@ -8,6 +11,7 @@ from app.models.weather import (
 from app.services import get_open_meteo_client, get_cassandra_client, get_cache_service
 
 router = APIRouter(prefix="/weather", tags=["weather"])
+logger = logging.getLogger(__name__)
 
 @router.get("/current", response_model=CurrentWeather)
 async def get_current_weather(
@@ -103,17 +107,38 @@ async def get_dashboard_data(
     client = await get_open_meteo_client()
     cache = await get_cache_service()
     
-    cache_key = f"dashboard:{lat}:{lon}"
+    location = location_for_city(name)
+    cache_key = f"dashboard:{lat}:{lon}:{name.casefold()}"
     cached = await cache.get(cache_key)
     if cached:
-        cached["last_updated"] = datetime.now().isoformat()
         return WeatherDashboardData(**cached)
     
-    # Fetch all data in parallel-ish
-    current = await client.get_current_weather(lat, lon)
-    hourly, daily = await client.get_forecast(lat, lon, 48, 7)
-    trends = await client.get_historical(lat, lon, 30)
-    alerts = await client.get_alerts(lat, lon, current, daily)
+    # Monitored cities use the persisted pipeline for observations and history.
+    # Forecasts remain explicitly provider sourced.
+    if location:
+        cassandra = await get_cassandra_client()
+        record = await cassandra.get_latest_for_city(location["city"])
+        current = stored_current(record) if record else None
+        trends = await cassandra.get_historical_for_city(location["city"], 30)
+        source = WeatherSource.CASSANDRA
+        dashboard_error = None if current else "No persisted observation is available for this monitored city"
+    else:
+        current = await client.get_current_weather(lat, lon)
+        trends = await client.get_historical(lat, lon, 30)
+        source = WeatherSource.OPEN_METEO
+        dashboard_error = None
+
+    try:
+        hourly, daily = await client.get_forecast(lat, lon, 48, 7)
+        if location:
+            source = WeatherSource.MIXED
+    except Exception:
+        if not location:
+            raise
+        logger.warning("Provider forecast unavailable for monitored city %s", name, exc_info=True)
+        hourly, daily = [], []
+        dashboard_error = "Open-Meteo forecast is temporarily unavailable"
+    alerts = await client.get_alerts(lat, lon, current, daily) if current and daily else []
     
     dashboard = WeatherDashboardData(
         location={"lat": lat, "lon": lon},
@@ -123,9 +148,11 @@ async def get_dashboard_data(
         daily=daily,
         trends=trends,
         alerts=alerts,
-        last_updated=datetime.now(),
-        data_source=WeatherSource.OPEN_METEO,
+        last_updated=current.time if current else datetime.now(timezone.utc),
+        data_source=source,
+        error=dashboard_error,
     )
     
-    await cache.set(cache_key, dashboard.model_dump(), 600)  # 10 min cache
-    return dashboard
+    payload = dashboard.model_dump(mode="json")
+    await cache.set(cache_key, payload, 60)
+    return payload

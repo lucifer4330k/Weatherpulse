@@ -59,6 +59,7 @@ def overview_to_states_df(overview: Dict[str, Any]) -> pd.DataFrame:
         rows.append({
             "state_code": s.get("code"),
             "state_name": s.get("name"),
+            "sampled_city": s.get("sampled_city"),
             "lat": center.get("lat"),
             "lon": center.get("lon"),
             "temperature": cur.get("temperature"),
@@ -92,7 +93,7 @@ def compute_overview_kpis(df: pd.DataFrame) -> Dict[str, Any]:
             "min_temp": None, "min_temp_state": None,
             "total_states": len(df),
             "reporting_states": 0,
-            "total_precip": None,
+            "avg_precip": None,
             "avg_humidity": None,
             "alert_count": 0,
         }
@@ -104,7 +105,7 @@ def compute_overview_kpis(df: pd.DataFrame) -> Dict[str, Any]:
         "min_temp_state": valid.loc[valid["temperature"].idxmin(), "state_name"],
         "total_states": len(df),
         "reporting_states": len(valid),
-        "total_precip": round(valid["precipitation"].sum(), 1) if valid["precipitation"].notna().any() else None,
+        "avg_precip": round(valid["precipitation"].mean(), 1) if valid["precipitation"].notna().any() else None,
         "avg_humidity": round(valid["humidity"].mean(), 1) if valid["humidity"].notna().any() else None,
         "alert_count": int((valid["alert_level"] != "none").sum()),
     }

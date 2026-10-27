@@ -14,7 +14,7 @@ import {
   getCassandraCities,
   healthCheck,
 } from '../services/api';
-import type { Coordinates, WeatherDashboardData, IndiaOverviewResponse, StateWeatherSummary, DistrictWeatherSummary, WeatherTrends, WeatherAlert } from '../types';
+import type { Coordinates } from '../types';
 import type { CassandraLatestObservation } from '../services/api';
 
 // Query Keys
@@ -157,7 +157,7 @@ export function useCassandraLatest(city: string | null, enabled = true) {
 // Cassandra Latest Multiple Cities Hook
 function fetchCassandraLatestMultiple(cities: string[]): Promise<Record<string, CassandraLatestObservation>> {
   if (cities.length === 0) return Promise.resolve({});
-  return getCassandraLatestBatch(cities).catch(() => ({}));
+  return getCassandraLatestBatch(cities);
 }
 
 export function useCassandraLatestMultiple(cities: string[], enabled = true) {

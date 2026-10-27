@@ -1,0 +1,8 @@
+.git
+frontend/node_modules
+frontend/dist
+frontend/streamlit_dashboard
+backend/__pycache__
+backend/.venv
+**/__pycache__
+*.log

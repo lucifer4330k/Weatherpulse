@@ -85,32 +85,14 @@ export function DataFreshness({ data }: DataFreshnessProps) {
 
       {/* Cache & refresh status */}
       <div className="mt-2.5 pt-2 border-t border-[#222222] flex items-center justify-between text-[10px] text-[#737373]">
-        <span>Auto-sync interval: ~{getNextRefreshMinutes(data.dataSource)} min</span>
+        <span>{data.dataSource === 'open-meteo' ? 'On-demand model reading' : 'Scheduled collection: ~30 min'}</span>
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3 text-[#E7B75A]" />
-          TTL: {getCacheDuration(data.dataSource)} min
+          Client stale after 10 min
         </span>
       </div>
     </div>
   );
-}
-
-function getNextRefreshMinutes(source: string): number {
-  switch (source) {
-    case 'open-meteo': return 10;
-    case 'cassandra': return 60;
-    case 'mixed': return 10;
-    default: return 10;
-  }
-}
-
-function getCacheDuration(source: string): number {
-  switch (source) {
-    case 'open-meteo': return 10;
-    case 'cassandra': return 60;
-    case 'mixed': return 10;
-    default: return 10;
-  }
 }
 
 export default DataFreshness;

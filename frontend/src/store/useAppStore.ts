@@ -2,11 +2,6 @@ import { create } from 'zustand';
 import type {
   AppState,
   MapViewport,
-  Coordinates,
-  GeocodeResult,
-  WeatherDashboardData,
-  IndiaOverviewResponse,
-  DistrictWeatherSummary,
 } from '../types';
 
 const DEFAULT_VIEWPORT: MapViewport = {

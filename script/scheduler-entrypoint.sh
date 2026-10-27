@@ -20,13 +20,6 @@ else
 fi
 echo "PostgreSQL is ready!"
 
-# Install Python dependencies
-if [ -e "/opt/airflow/requirements.txt" ]; then
-  echo "Installing Python dependencies..."
-  pip install --upgrade pip
-  pip install --user -r /opt/airflow/requirements.txt
-fi
-
 # Run database migrations (in case webserver hasn't done it yet)
 echo "Running database migrations..."
 airflow db migrate

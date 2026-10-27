@@ -26,6 +26,7 @@ interface CurrentConditionsProps {
 export function CurrentConditions({ data }: CurrentConditionsProps) {
   const current = data?.current;
   const hourly = data?.hourly || [];
+  const today = data?.daily?.[0];
 
   if (!current) {
     return (
@@ -73,7 +74,7 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
   const weatherDescription = current.weatherDescription;
   const weatherCode = current.weatherCode;
   const visibility = current.visibility;
-  const cloudCover = current.cloudCover ?? 0;
+  const cloudCover = current.cloudCover;
   const uvIndex = current.uvIndex;
   const precipitation = current.precipitation;
   const pressure = current.pressure;
@@ -147,19 +148,19 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
         <WeatherDetailCard
           icon={<Wind className="w-4 h-4 text-[#E7B75A]" />}
           label="Wind"
-          value={`${windSpeed} km/h`}
+          value={`${windSpeed.toFixed(1)} km/h`}
           description={`${windDirectionText} (${windDirection}°) • ${windInfo.label}`}
         />
         <WeatherDetailCard
           icon={<Gauge className="w-4 h-4 text-[#A3A3A3]" />}
           label="Pressure"
-          value={`${pressure} hPa`}
-          description={getPressureDescription(pressure)}
+          value={`${pressure.toFixed(1)} hPa`}
+          description="Surface pressure at this elevation"
         />
         <WeatherDetailCard
           icon={<CloudRain className="w-4 h-4 text-[#7899B8]" />}
           label="Precipitation"
-          value={`${precipitation} mm`}
+          value={`${precipitation.toFixed(1)} mm`}
           description={getPrecipitationDescription(precipitation)}
         />
       </div>
@@ -175,8 +176,8 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
         <WeatherDetailCard
           icon={<Cloud className="w-4 h-4 text-[#A3A3A3]" />}
           label="Cloud Cover"
-          value={`${cloudCover}%`}
-          description={getCloudCoverDescription(cloudCover)}
+          value={cloudCover == null ? 'N/A' : `${cloudCover}%`}
+          description={cloudCover == null ? 'Data unavailable' : getCloudCoverDescription(cloudCover)}
         />
         <WeatherDetailCard
           icon={<SunIcon className="w-4 h-4 text-[#E7B75A]" />}
@@ -201,7 +202,7 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
         <div className="grid grid-cols-3 gap-2.5 text-xs">
           <div className="p-3 bg-[#171717] border border-[#222222] rounded">
             <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider mb-1">Speed</p>
-            <p className="text-[#F5F5F5] font-mono font-semibold text-base tabular-nums">{windSpeed} km/h</p>
+            <p className="text-[#F5F5F5] font-mono font-semibold text-base tabular-nums">{windSpeed.toFixed(1)} km/h</p>
             <p className="text-[#737373] text-[10px] mt-0.5">{windInfo.label}</p>
           </div>
           <div className="p-3 bg-[#171717] border border-[#222222] rounded relative">
@@ -214,14 +215,14 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
           </div>
           <div className="p-3 bg-[#171717] border border-[#222222] rounded">
             <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider mb-1">Peak Gust</p>
-            <p className="text-[#F5F5F5] font-mono font-semibold text-base tabular-nums">{current.windGust == null ? 'N/A' : `${current.windGust} km/h`}</p>
+            <p className="text-[#F5F5F5] font-mono font-semibold text-base tabular-nums">{current.windGust == null ? 'N/A' : `${current.windGust.toFixed(1)} km/h`}</p>
             <p className="text-[#737373] text-[10px] mt-0.5">{current.windGust == null ? 'Not reported' : 'Observed gust'}</p>
           </div>
         </div>
       </div>
 
       {/* Sun Times Card */}
-      {(current as any).sunrise && (current as any).sunset && (
+      {today?.sunrise && today?.sunset && (
         <div className="bg-[#101010] border border-[#2A2A2A] rounded p-4">
           <h4 className="text-[#F5F5F5] text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2">
             <SunIcon className="w-3.5 h-3.5 text-[#E7B75A]" />
@@ -234,7 +235,7 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
               </div>
               <div>
                 <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider">Sunrise</p>
-                <p className="text-[#F5F5F5] font-mono text-xs font-medium">{formatTime((current as any).sunrise)}</p>
+                <p className="text-[#F5F5F5] font-mono text-xs font-medium">{formatTime(today.sunrise)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-[#171717] border border-[#222222] rounded">
@@ -243,7 +244,7 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
               </div>
               <div>
                 <p className="text-[#737373] text-[10px] font-mono uppercase tracking-wider">Sunset</p>
-                <p className="text-[#F5F5F5] font-mono text-xs font-medium">{formatTime((current as any).sunset)}</p>
+                <p className="text-[#F5F5F5] font-mono text-xs font-medium">{formatTime(today.sunset)}</p>
               </div>
             </div>
           </div>
@@ -288,8 +289,8 @@ export function CurrentConditions({ data }: CurrentConditionsProps) {
             <span>Source: {current.source === 'cassandra' ? 'Cassandra Ingest' : 'Open-Meteo'}</span>
           </div>
           <div className="flex items-center gap-3 text-[#737373] tabular-nums text-[11px]">
-            <span>Lat: {current.latitude?.toFixed(4) ?? 'N/A'}</span>
-            <span>Lon: {current.longitude?.toFixed(4) ?? 'N/A'}</span>
+            <span>Lat: {(current.latitude ?? data?.location.lat)?.toFixed(4) ?? 'N/A'}</span>
+            <span>Lon: {(current.longitude ?? data?.location.lon)?.toFixed(4) ?? 'N/A'}</span>
           </div>
         </div>
       </div>
@@ -326,14 +327,6 @@ function getHumidityDescription(humidity: number): string {
   if (humidity < 70) return 'Moderately humid';
   if (humidity < 85) return 'Humid';
   return 'Very humid';
-}
-
-function getPressureDescription(pressure: number): string {
-  if (pressure < 1000) return 'Low pressure - stormy';
-  if (pressure < 1010) return 'Below normal';
-  if (pressure < 1020) return 'Normal barometric';
-  if (pressure < 1030) return 'High pressure - fair';
-  return 'Very high pressure';
 }
 
 function getPrecipitationDescription(precip: number): string {

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from datetime import datetime
+from datetime import datetime, timezone
 from app.models.weather import HealthResponse
 import asyncio
 
@@ -8,19 +8,14 @@ router = APIRouter(prefix="", tags=["health"])
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint for monitoring - non-blocking"""
-    from app.services import get_open_meteo_client, get_cassandra_client, get_cache_service
-    from app.config import settings
+    from app.services import get_cassandra_client, get_cache_service
     
     services = {}
     
-    # Probe the dashboard's actual current-weather path. The geocoder returns
-    # an empty list on failures, so it is not a reliable readiness signal.
-    try:
-        client = await get_open_meteo_client()
-        await asyncio.wait_for(client.get_current_weather(28.6139, 77.2090), timeout=8.0)
-        services["open_meteo"] = "healthy"
-    except Exception as e:
-        services["open_meteo"] = f"unhealthy: {str(e)}"
+    # The external provider is probed only by the explicit provider endpoint.
+    # A frequent health poll must not consume provider requests or make the
+    # stored-observation API appear unavailable during provider outages.
+    services["open_meteo"] = "not_checked"
     
     # Verify a real Cassandra round trip; object construction alone is not a
     # dependency health check.
@@ -45,12 +40,12 @@ async def health_check():
     except Exception as e:
         services["cache"] = f"unhealthy: {str(e)}"
     
-    overall_status = "healthy" if all(v == "healthy" for v in services.values()) else "degraded"
+    overall_status = "healthy" if services["cassandra"] == "healthy" and services["cache"] == "healthy" else "degraded"
     
     from app.models.weather import HealthResponse
     return HealthResponse(
         status=overall_status,
-        timestamp=datetime.now(),
+        timestamp=datetime.now(timezone.utc),
         services=services,
     )
 
@@ -58,12 +53,25 @@ async def health_check():
 async def readiness_check():
     """Return ready only when mandatory serving dependencies are available."""
     health = await health_check()
-    # Local-cache fallback is an acceptable serving mode; weather and history
-    # dependencies are the mandatory readiness requirements.
-    if any(health.services.get(name) != "healthy" for name in ("open_meteo", "cassandra")):
+    # Stored observations require Cassandra. Redis may fall back locally and
+    # a provider outage affects forecasts, not the persisted data path.
+    if health.services.get("cassandra") != "healthy":
         from fastapi import HTTPException
         raise HTTPException(status_code=503, detail={"status": "not_ready", "services": health.services})
     return {"status": "ready"}
+
+
+@router.get("/health/provider")
+async def provider_health_check():
+    """Explicitly probe the external weather provider when requested."""
+    from app.services import get_open_meteo_client
+    from fastapi import HTTPException
+    try:
+        client = await get_open_meteo_client()
+        await asyncio.wait_for(client.get_current_weather(28.6139, 77.2090), timeout=8.0)
+        return {"status": "healthy", "provider": "open-meteo"}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Open-Meteo probe failed: {exc}") from exc
 
 @router.get("/live")
 async def liveness_check():

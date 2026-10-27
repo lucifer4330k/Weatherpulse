@@ -122,11 +122,11 @@ All endpoints are mounted under both the root `/` and `/api` prefix for seamless
 * `GET /api/geocode?q=Mumbai&limit=5`
   * Searches locations matching query restricted to India (`country_code=IN`).
 * `GET /api/geocode/reverse?lat=19.0760&lon=72.8777`
-  * Reverse geocodes coordinates to administrative locality name and state.
+  * Returns configured monitored points within 50 km, marked `WP_MONITORED_POINT`. This is not a postal or administrative reverse geocoder.
 
 ### 4. India National Overview
 * `GET /api/india/overview`
-  * Returns national averages and current temperature readings for all 36 Indian states and union territories.
+  * Returns all 36 state/UT entries, with weather values only for reporting monitored city samples. Sampled averages are not area-weighted national estimates.
 * `GET /api/india/state/{state_code}`
   * Returns detailed state metrics and bounding box coordinates for a state (e.g. `MH`, `DL`, `KA`).
 

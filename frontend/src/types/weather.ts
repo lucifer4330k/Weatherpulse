@@ -109,11 +109,11 @@ export interface WeatherAlert {
 
 export interface HistoricalDataPoint {
   timestamp: string;
-  temperature: number;
-  humidity: number;
-  pressure: number;
-  windSpeed: number;
-  precipitation: number;
+  temperature: number | null;
+  humidity: number | null;
+  pressure: number | null;
+  windSpeed: number | null;
+  precipitation: number | null;
   source: 'cassandra' | 'open-meteo';
 }
 
@@ -122,18 +122,18 @@ export interface WeatherTrends {
   locationName: string;
   period: '7d' | '30d' | '90d' | '1y';
   temperature: {
-    min: number;
-    max: number;
-    avg: number;
+    min: number | null;
+    max: number | null;
+    avg: number | null;
     data: HistoricalDataPoint[];
   };
   precipitation: {
-    total: number;
-    avg: number;
+    total: number | null;
+    avg: number | null;
     data: HistoricalDataPoint[];
   };
   humidity: {
-    avg: number;
+    avg: number | null;
     data: HistoricalDataPoint[];
   };
 }
@@ -223,10 +223,14 @@ export interface ApiResponse<T> {
 export interface IndiaOverviewResponse {
   states: StateWeatherSummary[];
   national: {
-    avgTemperature: number;
-    avgHumidity: number;
-    totalPrecipitation: number;
+    avgTemperature: number | null;
+    avgHumidity: number | null;
+    meanSampledPrecipitation: number | null;
     alertCount: number;
+    monitoredLocations: number;
+    reportingLocations: number;
+    reportingStates: number;
+    coverageLabel: string;
   };
   timestamp: string;
 }
@@ -234,6 +238,7 @@ export interface IndiaOverviewResponse {
 export interface StateWeatherSummary {
   code: string;
   name: string;
+  sampledCity?: string | null;
   center: Coordinates;
   bounds: BoundingBox;
   current: CurrentWeather | null;

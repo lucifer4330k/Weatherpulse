@@ -1,0 +1,8 @@
+node_modules
+dist
+.vite
+.git
+coverage
+*.log
+streamlit_dashboard
+public/geojson/geoboundaries-*.geojson

@@ -20,26 +20,26 @@ interface HistoricalChartsProps {
 
 export function HistoricalCharts({ data }: HistoricalChartsProps) {
   const trends = data?.trends;
-  const [period, setPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [period, setPeriod] = useState<'7d' | '30d'>('30d');
 
   // Filter data based on selected period
   const filteredTempData = useMemo(() => {
     if (!trends) return [];
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    const days = period === '7d' ? 7 : 30;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    return trends.temperature.data.filter((d) => new Date(d.timestamp).getTime() >= cutoff);
+    return trends.temperature.data.filter((d) => d.temperature != null && new Date(d.timestamp).getTime() >= cutoff);
   }, [trends, period]);
 
   const filteredPrecipData = useMemo(() => {
     if (!trends) return [];
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    const days = period === '7d' ? 7 : 30;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    return trends.precipitation.data.filter((d) => new Date(d.timestamp).getTime() >= cutoff);
+    return trends.precipitation.data.filter((d) => d.precipitation != null && new Date(d.timestamp).getTime() >= cutoff);
   }, [trends, period]);
 
   const tempStats = useMemo(() => {
-    if (filteredTempData.length === 0) return { min: 0, max: 0, avg: 0, trend: 0 };
-    const temps = filteredTempData.map((d) => d.temperature);
+    if (filteredTempData.length === 0) return { min: null, max: null, avg: null, trend: null };
+    const temps = filteredTempData.map((d) => d.temperature).filter((value): value is number => value != null);
     const min = Math.min(...temps);
     const max = Math.max(...temps);
     const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
@@ -48,10 +48,9 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
   }, [filteredTempData]);
 
   const precipStats = useMemo(() => {
-    if (filteredPrecipData.length === 0) return { total: 0, avg: 0 };
-    const total = filteredPrecipData.reduce((a, b) => a + b.precipitation, 0);
-    const avg = total / filteredPrecipData.length;
-    return { total, avg };
+    if (filteredPrecipData.length === 0) return { avg: null };
+    const values = filteredPrecipData.map((d) => d.precipitation).filter((value): value is number => value != null);
+    return { avg: values.reduce((a, b) => a + b, 0) / values.length };
   }, [filteredPrecipData]);
 
   if (!trends) {
@@ -89,7 +88,7 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
           Historical Observations
         </h4>
         <div className="flex items-center gap-1 bg-[#101010] border border-[#2A2A2A] rounded p-0.5">
-          {(['7d', '30d', '90d', '1y'] as const).map((p) => (
+          {(['7d', '30d'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
@@ -110,24 +109,24 @@ export function HistoricalCharts({ data }: HistoricalChartsProps) {
         <StatCard
           icon={<TrendingUp className="w-4 h-4 text-[#E07A5F]" />}
           label="Max Observed"
-          value={`${tempStats.max.toFixed(1)}°C`}
-          trend={tempStats.trend > 0 ? 'up' : tempStats.trend < 0 ? 'down' : 'neutral'}
-          trendValue={Math.abs(tempStats.trend).toFixed(1)}
+          value={tempStats.max == null ? '—' : `${tempStats.max.toFixed(1)}°C`}
+          trend={tempStats.trend == null ? undefined : tempStats.trend > 0 ? 'up' : tempStats.trend < 0 ? 'down' : 'neutral'}
+          trendValue={tempStats.trend == null ? undefined : Math.abs(tempStats.trend).toFixed(1)}
         />
         <StatCard
           icon={<TrendingDown className="w-4 h-4 text-[#7899B8]" />}
           label="Min Observed"
-          value={`${tempStats.min.toFixed(1)}°C`}
+          value={tempStats.min == null ? '—' : `${tempStats.min.toFixed(1)}°C`}
         />
         <StatCard
           icon={<Minus className="w-4 h-4 text-[#E7B75A]" />}
           label="Mean Temp"
-          value={`${tempStats.avg.toFixed(1)}°C`}
+          value={tempStats.avg == null ? '—' : `${tempStats.avg.toFixed(1)}°C`}
         />
         <StatCard
           icon={<Droplets className="w-4 h-4 text-[#7899B8]" />}
-          label="Cumulative Rain"
-          value={`${precipStats.total.toFixed(1)} mm`}
+          label="Mean Sampled Rain"
+          value={precipStats.avg == null ? '—' : `${precipStats.avg.toFixed(1)} mm`}
         />
       </div>
 

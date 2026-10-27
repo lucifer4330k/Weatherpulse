@@ -58,7 +58,7 @@ export function TopNavbar({ currentStyle, onStyleChange, is3D, onToggle3D }: Top
   };
 
   return (
-    <header className="h-14 w-full bg-[#101010] border-b border-[#2A2A2A] px-4 flex items-center justify-between gap-4 z-40 relative flex-shrink-0">
+    <header className="h-14 w-full bg-[#101010] border-b border-[#2A2A2A] px-2 sm:px-4 flex items-center justify-between gap-2 lg:gap-4 z-40 relative flex-shrink-0">
       {/* Left: Branding & View Scope */}
       <div className="flex items-center gap-3.5 flex-shrink-0">
         <div 
@@ -143,7 +143,7 @@ export function TopNavbar({ currentStyle, onStyleChange, is3D, onToggle3D }: Top
         {/* 2D / 3D Perspective Toggle Button */}
         <button
           onClick={onToggle3D}
-          className={`px-2.5 py-1 rounded text-xs font-mono font-medium border flex items-center gap-1.5 transition-colors ${
+          className={`hidden md:flex px-2.5 py-1 rounded text-xs font-mono font-medium border items-center gap-1.5 transition-colors ${
             is3D 
               ? 'bg-[#171717] text-[#E7B75A] border-[#E7B75A]/60' 
               : 'bg-[#171717] text-[#A3A3A3] border-[#2A2A2A] hover:text-[#F5F5F5] hover:border-neutral-600'
@@ -157,7 +157,7 @@ export function TopNavbar({ currentStyle, onStyleChange, is3D, onToggle3D }: Top
         {/* Map Style Switcher */}
         <button
           onClick={cycleMapStyle}
-          className="px-2.5 py-1 rounded text-xs font-mono font-medium bg-[#171717] text-[#A3A3A3] border border-[#2A2A2A] hover:border-neutral-600 hover:text-[#F5F5F5] transition-colors flex items-center gap-1.5"
+          className="hidden sm:flex px-2.5 py-1 rounded text-xs font-mono font-medium bg-[#171717] text-[#A3A3A3] border border-[#2A2A2A] hover:border-neutral-600 hover:text-[#F5F5F5] transition-colors items-center gap-1.5"
           title={`Active Style: ${getStyleLabel(currentStyle)}. Click to switch.`}
         >
           <Satellite className="w-3.5 h-3.5 text-[#E7B75A]" />
@@ -180,7 +180,7 @@ export function TopNavbar({ currentStyle, onStyleChange, is3D, onToggle3D }: Top
           href="http://localhost:8501"
           target="_blank"
           rel="noopener noreferrer"
-          className="px-2.5 py-1 rounded text-xs font-mono font-semibold bg-[#171717] text-[#E7B75A] border border-[#E7B75A]/40 hover:bg-[#202020] hover:border-[#E7B75A] transition-colors flex items-center gap-1.5"
+          className="hidden lg:flex px-2.5 py-1 rounded text-xs font-mono font-semibold bg-[#171717] text-[#E7B75A] border border-[#E7B75A]/40 hover:bg-[#202020] hover:border-[#E7B75A] transition-colors items-center gap-1.5"
           title="Open Streamlit Analytics Dashboard on Port 8501"
         >
           <BarChart3 className="w-3.5 h-3.5 text-[#E7B75A]" />

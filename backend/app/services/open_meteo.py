@@ -28,36 +28,12 @@ class OpenMeteoClient:
             "count": limit,
             "language": "en",
             "format": "json",
-            "country": country,
+            "countryCode": country,
         }
-        try:
-            response = await self.client.get(f"{self.geocoding_url}/search", params=params)
-            response.raise_for_status()
-            data = response.json()
-            results = data.get("results", [])
-            return [GeocodeResult(**r) for r in results]
-        except Exception as e:
-            logger.error(f"Geocoding error for '{query}': {e}")
-            return []
-
-    async def reverse_geocode(self, lat: float, lon: float, limit: int = 1) -> List[GeocodeResult]:
-        """Reverse geocode coordinates to location name"""
-        params = {
-            "latitude": lat,
-            "longitude": lon,
-            "count": limit,
-            "language": "en",
-            "format": "json",
-        }
-        try:
-            response = await self.client.get(f"{self.geocoding_url}/search", params=params)
-            response.raise_for_status()
-            data = response.json()
-            results = data.get("results", [])
-            return [GeocodeResult(**r) for r in results]
-        except Exception as e:
-            logger.error(f"Reverse geocoding error for ({lat}, {lon}): {e}")
-            return []
+        response = await self.client.get(f"{self.geocoding_url}/search", params=params)
+        response.raise_for_status()
+        data = response.json()
+        return [GeocodeResult(**r) for r in data.get("results", [])]
 
     # Current Weather
     async def get_current_weather(self, lat: float, lon: float) -> CurrentWeather:
@@ -127,7 +103,7 @@ class OpenMeteoClient:
             precipitation=cw["precipitation"],
             pressure=cw["surface_pressure"],
             weather_code=weather_code,
-            weather_description=self._get_weather_description(weather_code),
+            weather_description=self.weather_description(weather_code),
             is_day=bool(cw["is_day"]),
             time=datetime.fromisoformat(current_time.replace("Z", "+00:00")),
             source=WeatherSource.OPEN_METEO,
@@ -176,7 +152,7 @@ class OpenMeteoClient:
                     precipitation=hourly.get("precipitation", [0])[i],
                     precipitation_probability=hourly.get("precipitation_probability", [0])[i],
                     weather_code=weather_code,
-                    weather_description=self._get_weather_description(weather_code),
+                    weather_description=self.weather_description(weather_code),
                     pressure=hourly.get("surface_pressure", [1013])[i],
                     cloud_cover=hourly.get("cloud_cover", [0])[i],
                     visibility=hourly.get("visibility", [10000])[i] / 1000,
@@ -200,7 +176,7 @@ class OpenMeteoClient:
                     precipitation_sum=daily.get("precipitation_sum", [0])[i],
                     precipitation_probability_max=daily.get("precipitation_probability_max", [0])[i],
                     weather_code=weather_code,
-                    weather_description=self._get_weather_description(weather_code),
+                    weather_description=self.weather_description(weather_code),
                     pressure=1013,  # Daily pressure not directly available
                     uv_index_max=daily.get("uv_index_max", [0])[i],
                     sunrise=datetime.fromisoformat(daily.get("sunrise", [datetime.now().isoformat()])[i].replace("Z", "+00:00")),
@@ -415,7 +391,8 @@ class OpenMeteoClient:
             return round(wc, 1)
         return temp
 
-    def _get_weather_description(self, code: int) -> str:
+    @staticmethod
+    def weather_description(code: int) -> str:
         descriptions = {
             0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
             45: "Fog", 48: "Depositing rime fog",

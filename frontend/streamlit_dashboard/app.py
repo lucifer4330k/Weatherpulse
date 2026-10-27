@@ -34,7 +34,7 @@ from styles import GLOBAL_CSS, COLORS
 from api_client import (
     check_backend_status, clear_all_caches,
     fetch_india_overview, fetch_india_states,
-    fetch_current_weather, fetch_forecast, fetch_historical,
+    fetch_current_weather, fetch_forecast,
     fetch_alerts, fetch_dashboard, fetch_geocode,
     fetch_health, fetch_cassandra_cities,
     fetch_cassandra_latest, fetch_cassandra_historical,
@@ -161,7 +161,7 @@ def page_overview():
         f'<div class="editorial-header">'
         f'<div class="editorial-eyebrow">METEOROLOGICAL INTELLIGENCE · PAN-INDIA OBSERVATION NETWORK</div>'
         f'<div class="editorial-title">WeatherPulse Operational Analytics</div>'
-        f'<div class="editorial-copy">Deterministic state-level observations, spatial distributions, and streaming pipeline telemetry across Indian administrative centres.</div>'
+        f'<div class="editorial-copy">Stored observations from monitored Indian cities, with measured coverage and streaming pipeline context.</div>'
         f'<div class="editorial-meta"><span class="editorial-dot"></span> PIPELINE: OPEN-METEO / SPARK STREAMING / CASSANDRA</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -177,12 +177,13 @@ def page_overview():
 
     df = overview_to_states_df(overview)
     kpis = compute_overview_kpis(df)
+    national = overview.get("national", {})
     timestamp = safe_parse_datetime(overview.get("timestamp"))
 
     # KPI Row
     cols = st.columns(6)
     with cols[0]:
-        kpi_card("National Avg Temp", f"{kpis['avg_temp']}", "°C",
+        kpi_card("Monitored Avg Temp", f"{safe_round(national.get('avg_temperature', kpis['avg_temp']))}", "°C",
                  accent_color=COLORS["accent_amber"])
     with cols[1]:
         kpi_card("Max Recorded Temp", f"{kpis['max_temp']}", "°C",
@@ -193,10 +194,10 @@ def page_overview():
                  delta=kpis.get("min_temp_state"), delta_direction="neutral",
                  accent_color=COLORS["accent_blue"])
     with cols[3]:
-        kpi_card("Reporting Stations", f"{kpis['reporting_states']}/{kpis['total_states']}", "",
+        kpi_card("Reporting Cities", f"{national.get('reporting_locations', '—')}/{national.get('monitored_locations', '—')}", "",
                  accent_color=COLORS["accent_green"])
     with cols[4]:
-        kpi_card("Precipitation Volume", f"{kpis['total_precip']}", "mm",
+        kpi_card("Mean Sampled Rain", f"{safe_round(national.get('mean_sampled_precipitation', kpis['avg_precip']))}", "mm",
                  accent_color=COLORS["accent_blue"])
     with cols[5]:
         kpi_card("Elevated Alerts", f"{kpis['alert_count']}", "",
@@ -210,7 +211,7 @@ def page_overview():
     # Map + Top cities
     col_map, col_side = st.columns([2, 1])
     with col_map:
-        section_header("Geospatial Surface", "Centroid observations across Indian States and UTs")
+        section_header("Geospatial Samples", "One primary city sample per state or UT, plotted at its actual location")
         map_metric = st.selectbox(
             "Observation Metric",
             ["temperature", "precipitation", "humidity", "wind_speed"],
@@ -252,8 +253,8 @@ def page_overview():
                 f'<div style="background:{COLORS["bg_card"]};border:1px solid {COLORS["border"]};'
                 f'border-radius:4px;padding:16px;font-size:0.84rem;line-height:1.5;">'
                 f'<p style="color:{COLORS["text_secondary"]};margin:0 0 10px;">'
-                f'Across <strong style="color:{COLORS["text_primary"]};">{len(valid)}</strong> currently reporting state centres, '
-                f'the calculated national mean temperature stands at '
+                f'Across <strong style="color:{COLORS["text_primary"]};">{len(valid)}</strong> primary city samples (one per reporting state or UT), '
+                f'the mean temperature of those primary samples is '
                 f'<strong style="color:{COLORS["accent_amber"]};font-family:\'JetBrains Mono\', monospace;">{kpis["avg_temp"]}°C</strong>.'
                 f'</p>'
                 f'<p style="color:{COLORS["text_secondary"]};margin:0 0 10px;">'
@@ -263,7 +264,7 @@ def page_overview():
                 f'<strong style="font-family:\'JetBrains Mono\', monospace;">{kpis["min_temp"]}°C</strong>.'
                 f'</p>'
                 f'<p style="color:{COLORS["text_muted"]};font-size:0.75rem;font-family:\'JetBrains Mono\', monospace;margin:0;padding-top:8px;border-top:1px solid {COLORS["border"]};">'
-                f'Average humidity: {kpis.get("avg_humidity", "—")}% · Total measured rainfall: {kpis.get("total_precip", "—")} mm · '
+                f'Primary-sample humidity: {safe_round(kpis.get("avg_humidity"))}% · Primary-sample precipitation: {safe_round(kpis.get("avg_precip"))} mm · '
                 f'{kpis["alert_count"]} station(s) flagged for monitoring.'
                 f'</p>'
                 f'</div>',
@@ -528,7 +529,8 @@ def page_city_explorer():
     hist_dfs = {}
     for sname in selected[:4]:
         row = valid[valid["state_name"] == sname].iloc[0]
-        h = fetch_historical(row["lat"], row["lon"], days=30)
+        city = row.get("sampled_city")
+        h = fetch_cassandra_historical(city, days=30) if isinstance(city, str) and city else None
         if h:
             if hist_metric == "temperature":
                 tdf = (h.get("temperature") or {}).get("data", [])
@@ -553,30 +555,28 @@ def page_city_explorer():
 # ── F. Historical Trends ─────────────────────────────────────
 
 def page_historical():
-    section_header("Historical Time-Series Analytics", "Empirical trends retrieved from Open-Meteo & Cassandra archives")
+    section_header("Historical Time-Series Analytics", "Persisted observations from the Airflow / Kafka / Spark / Cassandra pipeline")
 
     overview = fetch_india_overview()
     if not overview:
         backend_offline_state()
         return
 
-    df = overview_to_states_df(overview)
-    valid = df.dropna(subset=["temperature"])
-    state_options = sorted(valid["state_name"].tolist())
+    available = fetch_cassandra_cities() or {}
+    state_options = sorted(available.get("cities", []))
 
     if not state_options:
-        empty_state("No States Available")
+        empty_state("No Stored Observations", "The ingestion pipeline has not persisted any monitored city yet.")
         return
 
     c1, c2 = st.columns([2, 1])
     with c1:
-        sel_state = st.selectbox("Target Location", state_options, key="hist_state")
+        sel_state = st.selectbox("Monitored City", state_options, key="hist_state")
     with c2:
         days = st.selectbox("Observation Window", [7, 14, 30, 60, 92], index=2,
                             format_func=lambda d: f"Past {d} days", key="hist_days")
 
-    row = valid[valid["state_name"] == sel_state].iloc[0]
-    trends = fetch_historical(row["lat"], row["lon"], days=days)
+    trends = fetch_cassandra_historical(sel_state, days=days)
 
     if not trends:
         empty_state("No Historical Records", f"Backend returned no historical records for {sel_state}.")
@@ -593,7 +593,7 @@ def page_historical():
         kpi_card("Temperature Range", f"{safe_round(summary.get('temp_min'))} – {safe_round(summary.get('temp_max'))}", "°C",
                  accent_color=COLORS["accent_coral"])
     with c3:
-        kpi_card("Total Precipitation", f"{safe_round(summary.get('precip_total'))}", "mm",
+        kpi_card("Mean Sampled Precipitation", f"{safe_round(summary.get('precip_avg'))}", "mm",
                  accent_color=COLORS["accent_blue"])
     with c4:
         kpi_card("Average Humidity", f"{safe_round(summary.get('humidity_avg'))}", "%",
@@ -654,7 +654,7 @@ def page_historical():
                 mime="text/csv",
             )
 
-    st.caption(f"Data source: Backend API → Open-Meteo historical records · Coordinates: {row['lat']:.2f}°N, {row['lon']:.2f}°E")
+    st.caption(f"Data source: Cassandra persisted observations for {sel_state}. Each point is an ingested provider observation, not a daily total.")
 
 
 # ── G. Location Search ───────────────────────────────────────

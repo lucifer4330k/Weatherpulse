@@ -1,5 +1,4 @@
 import type {
-  Coordinates,
   CurrentWeather,
   HourlyForecast,
   DailyForecast,
@@ -38,20 +37,22 @@ function toCamelCase(value: unknown): unknown {
 }
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => null) as { detail?: string; message?: string } | null;
-    throw new ApiError(response.status, error?.detail || error?.message || `Request failed with HTTP ${response.status}`);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => null) as { detail?: string; message?: string } | null;
+      throw new ApiError(response.status, error?.detail || error?.message || `Request failed with HTTP ${response.status}`);
+    }
+    return toCamelCase(await response.json()) as T;
+  } finally {
+    window.clearTimeout(timeout);
   }
-
-  return toCamelCase(await response.json()) as T;
 }
 
 // Geocoding
@@ -129,8 +130,8 @@ export async function getCassandraHistorical(city: string, days = 30): Promise<W
 }
 
 // Cassandra Latest
-export async function getCassandraLatest(city: string): Promise<CurrentWeather> {
-  return fetchApi<CurrentWeather>(`/cassandra/latest?city=${encodeURIComponent(city)}`);
+export async function getCassandraLatest(city: string): Promise<CassandraLatestObservation> {
+  return fetchApi<CassandraLatestObservation>(`/cassandra/latest?city=${encodeURIComponent(city)}`);
 }
 
 export interface CassandraLatestObservation {
@@ -145,11 +146,12 @@ export interface CassandraLatestObservation {
   longitude: number;
   temperature: number;
   humidity: number;
-  pressure: number;
-  windSpeed: number;
-  windDirection: string;
-  precipitation: number;
-  weatherCondition: string;
+  pressure: number | null;
+  windSpeed: number | null;
+  windGust: number | null;
+  windDirection: string | null;
+  precipitation: number | null;
+  weatherCondition: string | null;
 }
 
 export async function getCassandraLatestBatch(cities: string[]): Promise<Record<string, CassandraLatestObservation>> {

@@ -1,6 +1,6 @@
 // Map utility functions
 import type { Coordinates, BoundingBox } from '../types';
-import type { LayerSpecification } from 'maplibre-gl';
+import type { LayerSpecification, SkySpecification } from 'maplibre-gl';
 
 // Type declaration for ImportMeta
 declare global {
@@ -192,7 +192,7 @@ export function createWeatherLayer(layerType: WeatherLayerType): LayerSpecificat
 }
 
 // Convert GeoJSON to MapLibre style layers
-export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpecification[] {
+export function createStateLayers(): LayerSpecification[] {
   return [
     // Base fill for all states (subtle background)
     {
@@ -213,7 +213,7 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       paint: {
         'fill-color': [
           'case',
-          ['!=', ['get', 'temperature'], null as any],
+          ['has', 'temperature'],
           ['interpolate', ['linear'], ['get', 'temperature'],
             -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
             25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d'
@@ -301,7 +301,7 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
       type: 'symbol',
       source: 'states',
       minzoom: 5,
-      filter: ['!=', ['get', 'temperature'], null as any],
+      filter: ['has', 'temperature'],
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
         'text-font': ['Noto Sans Medium'],
@@ -319,7 +319,7 @@ export function createStateLayers(geojson: GeoJSON.FeatureCollection): LayerSpec
   ];
 }
 
-export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerSpecification[] {
+export function createDistrictLayers(): LayerSpecification[] {
   return [
     {
       id: 'districts-fill',
@@ -328,7 +328,7 @@ export function createDistrictLayers(geojson: GeoJSON.FeatureCollection): LayerS
       paint: {
         'fill-color': [
           'case',
-          ['!=', ['get', 'temperature'], null as any],
+          ['has', 'temperature'],
           ['interpolate', ['linear'], ['get', 'temperature'],
             -10, '#061d4e', 0, '#0d3b82', 10, '#145db8', 20, '#16a34a',
             25, '#4ade80', 30, '#eab308', 35, '#f97316', 40, '#dc2626', 45, '#7f1d1d'
@@ -555,7 +555,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-live',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
+      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -591,7 +591,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-live-glow',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
+      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live']]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -626,7 +626,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-markers-glow',
       type: 'circle',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['!', ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live', 'city-live', 'selected']]]]],
+      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['!', ['in', ['get', 'type'], ['literal', ['state-centre-live', 'district-live', 'city-live', 'selected']]]]],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -702,30 +702,10 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
     },
     // Temperature labels for tier 1, live & city-live
     {
-      id: 'weather-marker-temps-tier1-primary',
-      type: 'symbol',
-      source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live', 'city-live']]]],
-      minzoom: 5,
-      layout: {
-        'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
-        'text-font': ['Noto Sans Medium'],
-        'text-size': 11,
-        'text-anchor': 'bottom',
-        'text-offset': [0, -1.2],
-        'text-allow-overlap': true,
-      },
-      paint: {
-        'text-color': '#ffffff',
-        'text-halo-color': '#020617',
-        'text-halo-width': 2,
-      },
-    },
-    {
       id: 'weather-marker-temps-tier1',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live', 'city-live']]]],
+      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['in', ['get', 'type'], ['literal', ['tier1-city', 'state-centre-live', 'district-live', 'city-live']]]],
       minzoom: 5,
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
@@ -768,7 +748,7 @@ export function createWeatherMarkerLayers(): LayerSpecification[] {
       id: 'weather-marker-temps-tier2',
       type: 'symbol',
       source: 'weather-markers',
-      filter: ['all', ['!=', ['get', 'temperature'], null as any], ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
+      filter: ['all', ['has', 'temperature'], ['!=', ['get', 'type'], 'selected'], ['==', ['get', 'type'], 'tier2-city']],
       minzoom: 6,
       layout: {
         'text-field': ['concat', ['number-format', ['get', 'temperature'], {}], '°'],
@@ -1113,29 +1093,12 @@ export const TERRAIN_SOURCE = {
 };
 
 // Sky layer for atmospheric effect
-export const SKY_LAYER: any = {
-  id: 'sky',
-  type: 'sky',
-  paint: {
-    'sky-type': 'atmosphere',
-    'sky-atmosphere-sun': [0, 0],
-    'sky-atmosphere-sun-intensity': 15,
-    'sky-atmosphere-halo-color': 'rgba(231, 183, 90, 0.2)',
-    'sky-atmosphere-color': 'rgba(9, 9, 9, 1)',
-  },
-};
-
-// Fog layer for atmospheric depth
-export const FOG_LAYER: any = {
-  id: 'fog',
-  type: 'fog',
-  paint: {
-    'fog-color': '#090909',
-    'fog-high-color': '#101010',
-    'fog-ground-blend': 0.25,
-    'fog-end': 60000,
-    'fog-start': 2000,
-  },
+export const SKY_CONFIG: SkySpecification = {
+  'sky-color': '#090909',
+  'horizon-color': '#171717',
+  'fog-color': '#101010',
+  'fog-ground-blend': 0.25,
+  'horizon-fog-blend': 0.35,
 };
 
 // Available map styles for UI
@@ -1186,7 +1149,7 @@ export function getStateBounds(stateCode: string): { center: Coordinates; bounds
   return { center, bounds: { minLat, maxLat, minLon, maxLon } };
 }
 
-export function getDistrictBounds(stateCode: string, districtCode: string): { center: Coordinates; bounds: BoundingBox } | null {
+export function getDistrictBounds(stateCode: string): { center: Coordinates; bounds: BoundingBox } | null {
   // Placeholder - would be populated from district GeoJSON
   return getStateBounds(stateCode);
 }

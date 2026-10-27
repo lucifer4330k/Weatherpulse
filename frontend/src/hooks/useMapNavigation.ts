@@ -1,18 +1,17 @@
 import { useCallback } from 'react';
-import { useAppStore, useViewport, useSelectedLocation, useNavigationLevel, useSelectedState } from '../store/useAppStore';
-import type { Coordinates, MapViewport, BoundingBox } from '../types';
-import { getStateBounds, getDistrictBounds, STATE_BOUNDS } from '../services/mapUtils';
+import { useAppStore, useViewport, useNavigationLevel, useSelectedState } from '../store/useAppStore';
+import type { Coordinates } from '../types';
+import { getStateBounds, getDistrictBounds } from '../services/mapUtils';
 
 export function useMapNavigation() {
   const viewport = useViewport();
-  const selectedLocation = useSelectedLocation();
   const navigationLevel = useNavigationLevel();
   const selectedState = useSelectedState();
 
   const { setViewport, setSelectedLocation, setNavigationLevel, setSelectedState, setSelectedDistrict } = useAppStore();
 
   // Fly to a specific location
-  const flyTo = useCallback((coords: Coordinates, zoom?: number, duration = 1500) => {
+  const flyTo = useCallback((coords: Coordinates, zoom?: number) => {
     setViewport({
       center: coords,
       zoom: zoom ?? viewport.zoom,
@@ -22,12 +21,6 @@ export function useMapNavigation() {
 
   // Fly to India overview
   const flyToIndia = useCallback(() => {
-    const indiaBounds: BoundingBox = {
-      minLat: 6.5,
-      maxLat: 37.5,
-      minLon: 68.5,
-      maxLon: 97.5,
-    };
     setViewport({
       center: { lat: 22.5937, lon: 78.9629 },
       zoom: 4,
@@ -52,7 +45,7 @@ export function useMapNavigation() {
 
   // Fly to district
   const flyToDistrict = useCallback((stateCode: string, districtCode: string) => {
-    const bounds = getDistrictBounds(stateCode, districtCode);
+    const bounds = getDistrictBounds(stateCode);
     if (bounds) {
       setViewport({ center: bounds.center, zoom: 7.5 });
     }

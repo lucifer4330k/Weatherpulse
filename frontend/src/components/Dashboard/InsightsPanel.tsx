@@ -74,7 +74,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
   }, [overview]);
 
   const handleSelectState = (stateSummary: StateWeatherSummary) => {
-    setSelectedLocation(stateSummary.center, stateSummary.name);
+    setSelectedLocation(stateSummary.center, stateSummary.sampledCity || stateSummary.name);
     setSelectedState(stateSummary.code);
     setNavigationLevel('state');
   };
@@ -82,7 +82,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
   // If collapsed to side
   if (isCollapsed) {
     return (
-      <div className="h-full w-10 bg-[#101010] border-l border-[#2A2A2A] flex flex-col items-center justify-between py-4 z-20 flex-shrink-0 select-none">
+      <div className="absolute inset-x-0 bottom-0 h-10 w-full bg-[#101010] border-t border-[#2A2A2A] flex flex-row items-center justify-between px-4 z-20 select-none lg:static lg:h-full lg:w-10 lg:border-l lg:border-t-0 lg:flex-col lg:px-0 lg:py-4 lg:flex-shrink-0">
         <button
           onClick={onToggleCollapse}
           className="p-1.5 rounded text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717] transition-colors"
@@ -92,7 +92,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
           <ChevronLeft className="w-4 h-4 text-[#E7B75A]" />
         </button>
 
-        <div className="rotate-90 text-[10px] font-mono font-semibold uppercase tracking-widest text-[#737373] whitespace-nowrap">
+        <div className="text-[10px] font-mono font-semibold uppercase tracking-widest text-[#737373] whitespace-nowrap lg:rotate-90">
           {hasSelectedLocation ? locationName : 'STATION INTELLIGENCE'}
         </div>
 
@@ -112,7 +112,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
   ];
 
   return (
-    <aside className="h-full w-full lg:w-[400px] xl:w-[430px] bg-[#101010] border-l border-[#2A2A2A] flex flex-col z-20 flex-shrink-0 overflow-hidden font-sans">
+    <aside className="absolute inset-x-0 bottom-0 h-[46%] w-full bg-[#101010] border-t border-[#2A2A2A] flex flex-col z-20 overflow-hidden font-sans shadow-[0_-16px_36px_rgba(0,0,0,0.45)] lg:static lg:h-full lg:w-[400px] xl:w-[430px] lg:border-l lg:border-t-0 lg:flex-shrink-0 lg:shadow-none">
       {/* ── Top Header of Insights Panel ── */}
       <div className="p-3.5 bg-[#101010] border-b border-[#2A2A2A] flex items-center justify-between gap-3 flex-shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -130,7 +130,7 @@ export function InsightsPanel({ isCollapsed, onToggleCollapse }: InsightsPanelPr
             <p className="text-[#737373] text-[11px] font-mono truncate mt-0.5">
               {hasSelectedLocation 
                 ? (selectedState ? `STATE: ${selectedState} · TELEMETRY ACTIVE` : 'LOCATION OBSERVATION')
-                : '37 STATES & UNION TERRITORIES REPORTING'}
+                : overview ? `${overview.national.reportingStates} STATES & UNION TERRITORIES REPORTING` : 'LOADING COVERAGE'}
             </p>
           </div>
         </div>

@@ -7,12 +7,11 @@ import {
   Radio, 
   Clock,
 } from 'lucide-react';
-import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useIndiaOverview } from '../../hooks/useWeather';
 import { useAppStore } from '../../store/useAppStore';
 
 export function WeatherSummaryStrip() {
-  const { data: overview, isLoading } = useIndiaOverview();
+  const { data: overview, isLoading, isError } = useIndiaOverview();
   const setSelectedLocation = useAppStore((state) => state.setSelectedLocation);
   const setNavigationLevel = useAppStore((state) => state.setNavigationLevel);
   const setSelectedState = useAppStore((state) => state.setSelectedState);
@@ -34,11 +33,11 @@ export function WeatherSummaryStrip() {
 
     for (const state of states) {
       const temp = state.current.temperature;
-      const rain = state.current.precipitation ?? 0;
+      const rain = state.current.precipitation;
 
       if (temp > hottest.current.temperature) hottest = state;
       if (temp < coolest.current.temperature) coolest = state;
-      if (rain > (maxRainState.current.precipitation ?? 0)) maxRainState = state;
+      if (rain > maxRainState.current.precipitation) maxRainState = state;
       if (rain > 0) rainingCount++;
     }
 
@@ -49,12 +48,15 @@ export function WeatherSummaryStrip() {
       ? nationalRecord.avg_temperature
       : (states.reduce((acc, s) => acc + s.current.temperature, 0) / states.length);
 
-    let timeAgo = 'Just now';
+    let observationTime = 'Time unavailable';
     if (overview.timestamp) {
       try {
-        timeAgo = formatDistanceToNow(parseISO(overview.timestamp), { addSuffix: true });
+        observationTime = new Date(overview.timestamp).toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+        }) + ' IST';
       } catch {
-        timeAgo = 'Recently';
+        observationTime = 'Time unavailable';
       }
     }
 
@@ -62,40 +64,51 @@ export function WeatherSummaryStrip() {
       avgTemp: avgTemp.toFixed(1),
       hottest: {
         name: hottest.name,
+        sampledCity: hottest.sampledCity || hottest.name,
         code: hottest.code,
         temp: hottest.current.temperature.toFixed(1),
         coords: hottest.center,
       },
       coolest: {
         name: coolest.name,
+        sampledCity: coolest.sampledCity || coolest.name,
         code: coolest.code,
         temp: coolest.current.temperature.toFixed(1),
         coords: coolest.center,
       },
       maxRain: {
         name: maxRainState.name,
+        sampledCity: maxRainState.sampledCity || maxRainState.name,
         code: maxRainState.code,
         amount: (maxRainState.current.precipitation ?? 0).toFixed(1),
         rainingCount,
         coords: maxRainState.center,
       },
-      reportingCount: `${states.length}/${overview.states.length}`,
-      timeAgo,
+      reportingCount: `${overview.national.reportingStates}/${overview.national.reportingLocations}`,
+      observationTime,
     };
   }, [overview]);
 
-  const handleStateClick = (coords: { lat: number; lon: number }, name: string, code: string) => {
-    setSelectedLocation(coords, name);
+  const handleStateClick = (coords: { lat: number; lon: number }, sampledCity: string, code: string) => {
+    setSelectedLocation(coords, sampledCity);
     setSelectedState(code);
     setNavigationLevel('state');
   };
 
-  if (isLoading || !stats) {
+  if (isLoading) {
     return (
       <div className="h-10 w-full bg-[#090909] border-b border-[#2A2A2A] px-4 flex items-center justify-between overflow-x-auto gap-2 py-1 scrollbar-none flex-shrink-0">
         {[1, 2, 3, 4, 5, 6].map(i => (
           <div key={i} className="flex-1 min-w-[140px] h-7 rounded bg-[#171717] animate-pulse border border-[#2A2A2A]" />
         ))}
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="h-10 w-full bg-[#090909] border-b border-[#2A2A2A] px-4 flex items-center text-[#A3A3A3] text-xs font-mono">
+        {isError ? 'Stored observations unavailable — check the data API' : 'No monitored locations have stored observations yet'}
       </div>
     );
   }
@@ -106,14 +119,14 @@ export function WeatherSummaryStrip() {
       <div className="flex-1 min-w-[150px] h-7 px-2.5 rounded bg-[#101010] border border-[#2A2A2A] flex items-center gap-2 hover:border-[#E7B75A]/50 transition-colors">
         <Thermometer className="w-3.5 h-3.5 text-[#E7B75A] flex-shrink-0" />
         <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
-          <span className="text-[#737373] text-[11px] font-mono uppercase tracking-wider truncate">Avg Temp</span>
+          <span className="text-[#737373] text-[11px] font-mono uppercase tracking-wider truncate">Sample avg</span>
           <span className="text-[#F5F5F5] font-mono font-bold text-xs">{stats.avgTemp}°C</span>
         </div>
       </div>
 
       {/* 2. Highest Temperature State */}
       <button 
-        onClick={() => handleStateClick(stats.hottest.coords, stats.hottest.name, stats.hottest.code)}
+        onClick={() => handleStateClick(stats.hottest.coords, stats.hottest.sampledCity, stats.hottest.code)}
         className="flex-1 min-w-[170px] h-7 px-2.5 rounded bg-[#101010] border border-[#2A2A2A] flex items-center gap-2 hover:border-[#E07A5F] hover:bg-[#171717] transition-all text-left group"
         title={`Inspect warmest station: ${stats.hottest.name}`}
       >
@@ -126,7 +139,7 @@ export function WeatherSummaryStrip() {
 
       {/* 3. Coolest Temperature State */}
       <button 
-        onClick={() => handleStateClick(stats.coolest.coords, stats.coolest.name, stats.coolest.code)}
+        onClick={() => handleStateClick(stats.coolest.coords, stats.coolest.sampledCity, stats.coolest.code)}
         className="flex-1 min-w-[170px] h-7 px-2.5 rounded bg-[#101010] border border-[#2A2A2A] flex items-center gap-2 hover:border-[#7899B8] hover:bg-[#171717] transition-all text-left group"
         title={`Inspect coolest station: ${stats.coolest.name}`}
       >
@@ -139,7 +152,7 @@ export function WeatherSummaryStrip() {
 
       {/* 4. Rainfall Summary */}
       <button
-        onClick={() => handleStateClick(stats.maxRain.coords, stats.maxRain.name, stats.maxRain.code)}
+        onClick={() => handleStateClick(stats.maxRain.coords, stats.maxRain.sampledCity, stats.maxRain.code)}
         className="flex-1 min-w-[170px] h-7 px-2.5 rounded bg-[#101010] border border-[#2A2A2A] flex items-center gap-2 hover:border-[#7899B8] hover:bg-[#171717] transition-all text-left group"
         title={`Peak precipitation: ${stats.maxRain.name} (${stats.maxRain.amount} mm)`}
       >
@@ -158,7 +171,7 @@ export function WeatherSummaryStrip() {
       <div className="flex-1 min-w-[140px] h-7 px-2.5 rounded bg-[#101010] border border-[#2A2A2A] flex items-center gap-2">
         <Radio className="w-3.5 h-3.5 text-[#3EA874] flex-shrink-0" />
         <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
-          <span className="text-[#737373] text-[11px] font-mono uppercase tracking-wider truncate">Reporting</span>
+          <span className="text-[#737373] text-[11px] font-mono uppercase tracking-wider truncate">States / cities</span>
           <span className="text-[#3EA874] font-mono font-semibold text-xs">
             {stats.reportingCount}
           </span>
@@ -169,8 +182,8 @@ export function WeatherSummaryStrip() {
       <div className="flex-1 min-w-[150px] h-7 px-2.5 rounded bg-[#101010] border border-[#2A2A2A] flex items-center gap-2">
         <Clock className="w-3.5 h-3.5 text-[#737373] flex-shrink-0" />
         <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
-          <span className="text-[#737373] text-[11px] font-mono uppercase tracking-wider truncate">Sync</span>
-          <span className="text-[#A3A3A3] font-mono text-[11px] truncate">{stats.timeAgo}</span>
+          <span className="text-[#737373] text-[11px] font-mono uppercase tracking-wider truncate">Observed</span>
+          <span className="text-[#A3A3A3] font-mono text-[11px] truncate">{stats.observationTime}</span>
         </div>
       </div>
     </div>

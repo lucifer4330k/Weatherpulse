@@ -1,12 +1,16 @@
 import json
 import os
-import urllib.parse
-import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from kafka import KafkaProducer
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from weather_ingest import (
+    fetch_weather_event as collect_weather_event,
+    fetch_weather_batch as collect_weather_batch,
+    load_locations,
+)
 
 
 default_args = {
@@ -22,55 +26,8 @@ default_args = {
 
 logging.basicConfig(level=logging.INFO)
 
-# Kafka producer setup
-AIRFLOW_ORCHESTRATOR = True  # Determine orchestration provider
 KAFKA_HOSTS = [os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")]
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "weather_data_real")
-WEATHER_LOCATIONS = (
-    ("Delhi", 28.6139, 77.2090),
-    ("Mumbai", 19.0760, 72.8777),
-    ("Kolkata", 22.5726, 88.3639),
-    ("Chennai", 13.0827, 80.2707),
-    ("Bengaluru", 12.9716, 77.5946),
-)
-
-
-def _wind_direction_text(degrees):
-    directions = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
-    return directions[round(float(degrees) / 45) % 8]
-
-
-def fetch_weather_event(city, latitude, longitude, run_timestamp, ingested_at):
-    """Fetch one real observation and normalize it to the Spark Kafka schema."""
-    params = urllib.parse.urlencode({
-        "latitude": latitude, "longitude": longitude,
-        "current": "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure",
-        "timezone": "UTC", "wind_speed_unit": "kmh", "precipitation_unit": "mm",
-    })
-    with urllib.request.urlopen(f"https://api.open-meteo.com/v1/forecast?{params}", timeout=20) as response:
-        current = json.load(response).get("current", {})
-    required = ("time", "temperature_2m", "relative_humidity_2m", "precipitation", "weather_code", "wind_speed_10m", "wind_direction_10m", "surface_pressure")
-    missing = [field for field in required if current.get(field) is None]
-    if missing:
-        raise ValueError(f"Open-Meteo event for {city} missing fields: {', '.join(missing)}")
-    # run_timestamp: stable scheduled-run time used as primary key (idempotent on retry)
-    # ingested_at: actual collection time when the record was produced
-    return {
-        "station_id": f"open-meteo-{city.lower().replace(' ', '-')}",
-        "timestamp": run_timestamp,
-        "source_timestamp": current["time"],
-        "ingested_at": ingested_at,
-        "source": "open-meteo",
-        "location": {
-            "city": city, "country": "India", "latitude": float(latitude), "longitude": float(longitude),
-        },
-        "temperature": float(current["temperature_2m"]), "humidity": int(current["relative_humidity_2m"]),
-        "pressure": float(current["surface_pressure"]), "wind_speed": float(current["wind_speed_10m"]),
-        "wind_direction": _wind_direction_text(current["wind_direction_10m"]),
-        "precipitation": float(current["precipitation"]), "weather_condition": str(current["weather_code"]),
-    }
-
-
 def create_kafka_producer():
     return KafkaProducer(
         bootstrap_servers=KAFKA_HOSTS,
@@ -87,22 +44,41 @@ def stream_weather_data():
     producer = None
     try:
         producer = create_kafka_producer()
-        try:
-            from airflow.operators.python import get_current_context
-            logical_date = get_current_context()["logical_date"]
-            # run_timestamp: stable scheduled-run time used as primary key (idempotent on retry)
-            run_timestamp = logical_date.astimezone(timezone.utc).isoformat()
-        except Exception:
-            # Local execution has no logical Airflow run; production retries
-            # use the stable logical date above and are therefore idempotent.
-            run_timestamp = datetime.now(timezone.utc).isoformat()
-
-        for city, latitude, longitude in WEATHER_LOCATIONS:
-            # ingested_at: actual collection time when the record was produced (per city)
-            ingested_at = datetime.now(timezone.utc).isoformat()
-            weather_data = fetch_weather_event(city, latitude, longitude, run_timestamp, ingested_at)
-            producer.send(KAFKA_TOPIC, value=weather_data).get(timeout=10)
-        logging.info("Published real weather observations for %d locations.", len(WEATHER_LOCATIONS))
+        limit_setting = os.getenv("WEATHER_MAX_LOCATIONS")
+        limit = int(limit_setting) if limit_setting else None
+        if limit is not None and limit < 1:
+            raise ValueError("WEATHER_MAX_LOCATIONS must be positive")
+        locations = load_locations(limit=limit)
+        workers = max(1, min(4, int(os.getenv("WEATHER_FETCH_WORKERS", "4"))))
+        batch_size = max(1, min(10, int(os.getenv("WEATHER_BATCH_SIZE", "10"))))
+        sent = 0
+        failures = []
+        collected = []
+        for start in range(0, len(locations), batch_size):
+            batch = locations[start:start + batch_size]
+            try:
+                collected.extend(zip(batch, collect_weather_batch(batch)))
+            except Exception:
+                logging.exception("Batch collection failed; retrying %d locations individually", len(batch))
+                with ThreadPoolExecutor(max_workers=workers) as pool:
+                    pending = {pool.submit(collect_weather_event, location): location for location in batch}
+                    for future in as_completed(pending):
+                        location = pending[future]
+                        try:
+                            collected.append((location, future.result()))
+                        except Exception:
+                            logging.exception("Failed to collect %s", location["id"])
+                            failures.append(location["id"])
+        for location, weather_data in collected:
+            try:
+                producer.send(KAFKA_TOPIC, key=weather_data["station_id"].encode("utf-8"), value=weather_data).get(timeout=30)
+                sent += 1
+            except Exception:
+                logging.exception("Failed to publish %s", location["id"])
+                failures.append(location["id"])
+        logging.info("Published %d/%d real observations to %s; failed=%s", sent, len(locations), KAFKA_TOPIC, failures)
+        if failures:
+            raise RuntimeError(f"{len(failures)} weather locations failed: {failures}")
 
     except Exception as e:
         logging.error(f"Error occurred while streaming data to Kafka: {e}")
@@ -114,22 +90,16 @@ def stream_weather_data():
             logging.info("Kafka producer closed.")
 
 
-if AIRFLOW_ORCHESTRATOR:
-    # Airflow DAG definition
-    with DAG(
-        "weather_data_streaming",
-        default_args=default_args,
-        schedule_interval=timedelta(minutes=10),
-        catchup=False,
-        max_active_runs=1,
-    ) as dag:
-
-        # Kafka streaming task
-        kafka_streaming_task = PythonOperator(
-            task_id="stream_weather_data_kafka",
-            python_callable=stream_weather_data,
-            execution_timeout=timedelta(minutes=15),
-        )
-
-else:
-    stream_weather_data()
+with DAG(
+    "weather_data_streaming",
+    default_args=default_args,
+    schedule_interval=timedelta(minutes=int(os.getenv("WEATHER_INGEST_MINUTES", "30"))),
+    catchup=False,
+    max_active_runs=1,
+    is_paused_upon_creation=False,
+) as dag:
+    kafka_streaming_task = PythonOperator(
+        task_id="stream_weather_data_kafka",
+        python_callable=stream_weather_data,
+        execution_timeout=timedelta(minutes=15),
+    )

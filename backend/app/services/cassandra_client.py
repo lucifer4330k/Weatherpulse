@@ -4,10 +4,25 @@ from datetime import datetime, timedelta
 from cassandra.cluster import Cluster, Session
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
+from cassandra.concurrent import execute_concurrent_with_args
 from app.config import settings
+from app.locations import monitored_locations, location_for_city
 from app.models.weather import WeatherTrends, HistoricalDataPoint, WeatherSource, Coordinates
+from app.schema import ensure_schema
 
 logger = logging.getLogger(__name__)
+
+OBSERVATION_COLUMNS = (
+    "station_id, timestamp, source_timestamp, ingested_at, source, city, country, "
+    "latitude, longitude, temperature, humidity, pressure, wind_speed, "
+    "wind_direction, precipitation, weather_condition, event_id, location_id, "
+    "state_code, district, feels_like, wind_gust, cloud_cover, processed_at, "
+    "wind_direction_degrees, weather_code, is_day, generation_method, quality_flags"
+)
+
+
+def observation_dict(row):
+    return {name: getattr(row, name, None) for name in OBSERVATION_COLUMNS.split(", ")}
 
 class CassandraClient:
     def __init__(self):
@@ -32,35 +47,8 @@ class CassandraClient:
             )
             self.session = self.cluster.connect()
             
-            # Ensure keyspace exists
-            self.session.execute(f"""
-                CREATE KEYSPACE IF NOT EXISTS {self.keyspace}
-                WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': '1'}};
-            """)
+            ensure_schema(self.session, self.keyspace, self.table)
             self.session.set_keyspace(self.keyspace)
-
-            # Ensure table exists
-            self.session.execute(f"""
-                CREATE TABLE IF NOT EXISTS {self.keyspace}.{self.table} (
-                    station_id TEXT,
-                    timestamp TEXT,
-                    source_timestamp TEXT,
-                    ingested_at TEXT,
-                    source TEXT,
-                    city TEXT,
-                    country TEXT,
-                    latitude FLOAT,
-                    longitude FLOAT,
-                    temperature FLOAT,
-                    humidity INT,
-                    pressure FLOAT,
-                    wind_speed FLOAT,
-                    wind_direction TEXT,
-                    precipitation FLOAT,
-                    weather_condition TEXT,
-                    PRIMARY KEY ((city), timestamp, station_id)
-                ) WITH CLUSTERING ORDER BY (timestamp DESC, station_id ASC);
-            """)
 
             logger.info(f"Connected to Cassandra at {hosts}:{settings.cassandra_port} and ensured keyspace {self.keyspace}")
         except Exception as e:
@@ -78,6 +66,9 @@ class CassandraClient:
         if not self.session:
             await self.connect()
 
+        location = location_for_city(city)
+        city = location["city"] if location else city
+
         from datetime import timezone
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         cutoff_timestamp = cutoff_date.isoformat()
@@ -85,9 +76,11 @@ class CassandraClient:
         # Query weather data for the city
         query = f"""
         SELECT station_id, timestamp, source_timestamp, ingested_at, source, city, country, latitude, longitude,
-               temperature, humidity, pressure, wind_speed, wind_direction, precipitation, weather_condition
+               temperature, humidity, pressure, wind_speed, wind_direction, precipitation, weather_condition,
+               event_id, location_id, state_code, district, feels_like, wind_gust, cloud_cover, processed_at,
+               wind_direction_degrees, weather_code, is_day, generation_method, quality_flags
         FROM {self.keyspace}.{self.table}
-        WHERE city = %s AND timestamp >= %s
+        WHERE city = %s AND timestamp >= %s LIMIT 2000
         """
         
         try:
@@ -103,9 +96,9 @@ class CassandraClient:
             for row in rows:
                 # This table's timeline is collection history. `source_timestamp`
                 # remains available for provenance without mislabelling it.
-                timestamp = datetime.fromisoformat((row.ingested_at or row.timestamp).replace("Z", "+00:00"))
+                timestamp = datetime.fromisoformat((row.source_timestamp or row.timestamp).replace("Z", "+00:00"))
                 
-                temp_data.append(HistoricalDataPoint(
+                point = HistoricalDataPoint(
                     timestamp=timestamp,
                     temperature=row.temperature,
                     humidity=row.humidity,
@@ -113,29 +106,14 @@ class CassandraClient:
                     wind_speed=row.wind_speed,
                     precipitation=row.precipitation,
                     source=WeatherSource.CASSANDRA,
-                ))
-                precip_data.append(HistoricalDataPoint(
-                    timestamp=timestamp,
-                    temperature=0,
-                    humidity=0,
-                    pressure=0,
-                    wind_speed=0,
-                    precipitation=row.precipitation,
-                    source=WeatherSource.CASSANDRA,
-                ))
-                humidity_data.append(HistoricalDataPoint(
-                    timestamp=timestamp,
-                    temperature=0,
-                    humidity=row.humidity,
-                    pressure=0,
-                    wind_speed=0,
-                    precipitation=0,
-                    source=WeatherSource.CASSANDRA,
-                ))
+                )
+                temp_data.append(point)
+                precip_data.append(point)
+                humidity_data.append(point)
 
-            temps = [d.temperature for d in temp_data]
-            precips = [d.precipitation for d in precip_data]
-            humidities = [d.humidity for d in humidity_data]
+            temps = [d.temperature for d in temp_data if d.temperature is not None]
+            precips = [d.precipitation for d in precip_data if d.precipitation is not None]
+            humidities = [d.humidity for d in humidity_data if d.humidity is not None]
 
             # Get location from first row
             first_row = rows[0] if rows else None
@@ -147,18 +125,18 @@ class CassandraClient:
                 location_name=city,
                 period=f"{days}d",
                 temperature={
-                    "min": min(temps) if temps else 0,
-                    "max": max(temps) if temps else 0,
-                    "avg": sum(temps) / len(temps) if temps else 0,
+                    "min": min(temps) if temps else None,
+                    "max": max(temps) if temps else None,
+                    "avg": sum(temps) / len(temps) if temps else None,
                     "data": temp_data,
                 },
                 precipitation={
-                    "total": sum(precips),
-                    "avg": sum(precips) / len(precips) if precips else 0,
+                    "total": None,
+                    "avg": sum(precips) / len(precips) if precips else None,
                     "data": precip_data,
                 },
                 humidity={
-                    "avg": sum(humidities) / len(humidities) if humidities else 0,
+                    "avg": sum(humidities) / len(humidities) if humidities else None,
                     "data": humidity_data,
                 },
             )
@@ -172,37 +150,16 @@ class CassandraClient:
             await self.connect()
 
         # Query latest record for city (ordered by clustered timestamp DESC)
-        query = f"""
-        SELECT station_id, timestamp, source_timestamp, ingested_at, source, city, country, latitude, longitude,
-               temperature, humidity, pressure, wind_speed, wind_direction, precipitation, weather_condition
-        FROM {self.keyspace}.{self.table}
-        WHERE city = %s
-        LIMIT 1
-        """
+        canonical = location_for_city(city)
+        city = canonical["city"] if canonical else city
+        query = f"SELECT {OBSERVATION_COLUMNS} FROM {self.keyspace}.{self.table} WHERE city = %s LIMIT 1"
         
         try:
             statement = SimpleStatement(query, fetch_size=1)
             row = self.session.execute(statement, [city]).one()
             
             if row:
-                return {
-                    "station_id": str(row.station_id),
-                    "timestamp": row.timestamp,
-                    "source_timestamp": row.source_timestamp,
-                    "ingested_at": row.ingested_at,
-                    "source": row.source,
-                    "city": row.city,
-                    "country": row.country,
-                    "latitude": row.latitude,
-                    "longitude": row.longitude,
-                    "temperature": row.temperature,
-                    "humidity": row.humidity,
-                    "pressure": row.pressure,
-                    "wind_speed": row.wind_speed,
-                    "wind_direction": row.wind_direction,
-                    "precipitation": row.precipitation,
-                    "weather_condition": row.weather_condition,
-                }
+                return observation_dict(row)
             return None
         except Exception:
             logger.exception("Cassandra latest query failed for city '%s'", city)
@@ -210,34 +167,42 @@ class CassandraClient:
 
     async def get_latest_for_cities(self, cities: List[str]) -> Dict[str, Dict[str, Any]]:
         """Return the latest row for each requested city without a table scan."""
-        results: Dict[str, Dict[str, Any]] = {}
-        for city in dict.fromkeys(city.strip() for city in cities if city.strip()):
-            record = await self.get_latest_for_city(city)
-            if record is not None:
-                results[city] = record
-        return results
-
-    async def get_state_summary(self, state_code: str) -> List[Dict[str, Any]]:
-        """Get weather summary for cities in a state"""
         if not self.session:
             await self.connect()
-
-        # This would require a mapping of cities to states
-        # For now, return empty list - would need a proper state-city mapping
-        return []
+        configured = {location["city"] for location in monitored_locations()}
+        requested = list(dict.fromkeys(
+            location["city"] for city in cities
+            if (location := location_for_city(city)) and location["city"] in configured
+        ))
+        if not requested:
+            return {}
+        query = self.session.prepare(
+            f"SELECT {OBSERVATION_COLUMNS} FROM {self.keyspace}.{self.table} WHERE city = ? LIMIT 1"
+        )
+        import asyncio
+        responses = await asyncio.to_thread(
+            execute_concurrent_with_args, self.session, query,
+            [(city,) for city in requested], concurrency=8, raise_on_first_error=False,
+        )
+        results = {}
+        for city, (success, rows) in zip(requested, responses):
+            if not success:
+                logger.error("Latest observation query failed for %s: %s", city, rows)
+                raise rows
+            row = rows.one()
+            if row is not None:
+                results[city] = observation_dict(row)
+        return results
 
     async def get_all_cities(self) -> List[str]:
         """Get list of all cities with data"""
         if not self.session:
             await self.connect()
 
-        query = f"SELECT DISTINCT city FROM {self.keyspace}.{self.table}"
-        try:
-            rows = self.session.execute(query)
-            return [row.city for row in rows if row.city]
-        except Exception:
-            logger.exception("Cassandra get cities query failed")
-            raise
+        observations = await self.get_latest_for_cities(
+            [location["city"] for location in monitored_locations()]
+        )
+        return sorted(observations)
 
 # Singleton
 _cassandra_client: Optional[CassandraClient] = None
